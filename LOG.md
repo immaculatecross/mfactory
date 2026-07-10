@@ -27,3 +27,11 @@ Mattia created the GitHub repo (default branch `master`) and pushed the founding
 Verified end to end in `--local` mode: console.log, oversize file, bad commit message, fake API key, and private key all blocked with remediation messages; waivered lines and clean conventional commits pass. Testing caught one real bug — the private-key regex starts with `-` and grep parsed it as an option, failing silently behind `|| true`; fixed with `grep -e`, regression-tested. Lesson recorded: a gate that can fail silently is worse than no gate.
 
 Hooks are now armed on mfactory itself (`core.hooksPath`), and `.github/workflows/ci.yml` re-runs syntax checks, tripwires, and the scaffold smoke test on every push. F-002 stays `building`: the GitHub-side path (repo creation, protection) is untestable until D-016 (factory account) is decided. This entry lands as a direct push to master — pre-enforcement, deliberate, and impossible once protection is armed.
+
+---
+
+## 2026-07-10 — D-016 decided; F-002 built; protection armed; direct pushes end here
+
+Mattia decided D-016: immaculatecross is the factory identity, and authenticated `gh` accordingly; `~/.mfactory/owner` is set. The enforcement-pack CI run passed on GitHub's runners (8s). F-002 was then tested live end to end: `mfactory-new mfactory-smoke --public` created the repo, pushed, created both waiver labels, and armed branch protection (required checks tripwires/secrets/code/pr-rules, admins included) — all verified via the API, so F-002 moves to `built`. Deleting the smoke repo was refused for lack of `delete_repo` scope; per D-016 that scope stays withheld on purpose, and the cleanup is Mattia's one manual click.
+
+Branch protection is now armed on mfactory itself (required check `self-check`, admins included). This entry is the first change to land through a gated PR; direct pushes to master are no longer possible for anyone, including the factory.
