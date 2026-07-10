@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mfactory architecture, now</title>
+  <style type="text/css">
+    :root { --ink:#171717; --muted:#626262; --line:#c9c9c9; --paper:#f7f7f5; --panel:#fff; --built:#16704a; --manual:#9a5b00; --planned:#6a6675; --alert:#9b2c2c; }
+    * { box-sizing:border-box; }
+    html { font:16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:var(--paper); }
+    body { margin:0; }
+    .document { width:min(1160px,calc(100% - 40px)); margin:auto; padding:34px 0 72px; }
+    .document-header { min-height:70vh; display:grid; align-content:center; border-top:8px solid var(--ink); border-bottom:1px solid var(--ink); padding:8vh 0; }
+    .kicker,.eyebrow { margin:0 0 10px; text-transform:uppercase; font-size:.74rem; font-weight:750; color:var(--muted); }
+    h1 { max-width:850px; margin:0; font-size:5.8rem; line-height:.98; letter-spacing:0; }
+    .lede { max-width:780px; margin:26px 0 0; font-size:1.18rem; }
+    .asof { margin:20px 0 0; color:var(--muted); font-size:.88rem; }
+    .section { padding:48px 0; border-bottom:1px solid var(--line); }
+    h2 { margin:0 0 22px; font-size:1.75rem; letter-spacing:0; }
+    h3 { margin:0 0 8px; font-size:1rem; letter-spacing:0; }
+    p { max-width:760px; }
+    a { color:inherit; text-decoration-thickness:1px; text-underline-offset:3px; }
+    cite { font-style:normal; color:var(--muted); font-size:.82rem; }
+    .legend { display:flex; flex-wrap:wrap; gap:12px 22px; margin:24px 0 0; padding:0; list-style:none; }
+    .legend li,.status { display:inline-flex; align-items:center; gap:7px; font-size:.78rem; font-weight:700; text-transform:uppercase; }
+    .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--planned); font-size:0; }
+    .built .dot,.dot.built { background:var(--built); } .manual .dot,.dot.manual { background:var(--manual); } .planned .dot,.dot.planned { background:var(--planned); }
+    .flow { display:grid; grid-template-columns:1fr 52px 1fr; align-items:center; gap:10px; margin:26px 0; }
+    .flow-box { border:2px solid var(--ink); padding:18px; background:var(--panel); }
+    .flow-box strong { display:block; font-size:1.1rem; }
+    .flow-box span { color:var(--muted); font-size:.88rem; }
+    .arrow { text-align:center; font-size:1.8rem; }
+    .worker-row { grid-column:3; grid-row:2; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .worker-row div { border:1px solid var(--ink); padding:12px; background:var(--panel); font-weight:700; text-align:center; }
+    .note { border-left:4px solid var(--manual); padding:10px 16px; background:#fff8e8; }
+    .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+    .item { border:1px solid var(--line); border-radius:6px; background:var(--panel); padding:17px; }
+    .item p { margin:6px 0 0; color:var(--muted); font-size:.9rem; }
+    .mode-strip,.lifecycle { display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--ink); background:var(--panel); }
+    .mode-strip div,.lifecycle div { padding:15px; border-right:1px solid var(--line); }
+    .mode-strip div:last-child,.lifecycle div:last-child { border:0; }
+    .mode-strip small,.lifecycle small { display:block; color:var(--muted); }
+    .table-wrap { overflow-x:auto; border:1px solid var(--line); background:var(--panel); }
+    table { width:100%; border-collapse:collapse; min-width:700px; }
+    th,td { padding:12px 14px; text-align:left; vertical-align:top; border-bottom:1px solid var(--line); }
+    th { font-size:.74rem; text-transform:uppercase; background:#eeeeeb; }
+    tr:last-child td { border-bottom:0; }
+    td:first-child { width:27%; font-weight:700; }
+    .timeline { list-style:none; padding:0; margin:0; counter-reset:step; }
+    .timeline li { display:grid; grid-template-columns:42px 1fr; gap:12px; padding:0 0 22px; }
+    .timeline li::before { counter-increment:step; content:counter(step); width:30px; height:30px; display:grid; place-items:center; border:1px solid var(--ink); border-radius:50%; font-weight:700; }
+    .timeline strong { display:block; }
+    .timeline p { margin:4px 0; }
+    .cost { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .cost .article { border-top:5px solid var(--built); padding:18px 0; }
+    .cost .article:last-child { border-color:var(--alert); }
+    .cost ul,.priority-list { padding-left:20px; }
+    .priority-list li { padding:10px 0; border-bottom:1px solid var(--line); }
+    .priority-list strong { display:inline-block; min-width:62px; }
+    .sources { columns:2; column-gap:40px; padding-left:20px; }
+    .sources li { break-inside:avoid; margin-bottom:11px; }
+    .document-footer { padding:28px 0; color:var(--muted); font-size:.85rem; }
+    @media (max-width:720px) {
+      .document { width:min(100% - 28px,1160px); padding-top:20px; }
+      .document-header { min-height:76vh; }
+      h1 { font-size:2.8rem; }
+      .section { padding:36px 0; }
+      .flow { grid-template-columns:1fr; }
+      .arrow { transform:rotate(90deg); }
+      .worker-row { grid-column:1; grid-row:auto; grid-template-columns:1fr; }
+      .grid-3,.cost { grid-template-columns:1fr; }
+      .mode-strip,.lifecycle { grid-template-columns:1fr 1fr; }
+      .mode-strip div:nth-child(2),.lifecycle div:nth-child(2) { border-right:0; }
+      .mode-strip div:nth-child(-n+2),.lifecycle div:nth-child(-n+2) { border-bottom:1px solid var(--line); }
+      table,tbody { display:block; min-width:0; }
+      thead { display:none; }
+      tr { display:grid; grid-template-columns:1fr auto; padding:12px; border-bottom:1px solid var(--line); }
+      td { display:block; padding:3px 0; border:0; }
+      td:first-child { width:auto; }
+      td:last-child { grid-column:1 / -1; color:var(--muted); }
+      .sources { columns:1; }
+    }
+    @media print {
+      @page { margin:14mm; }
+      html { font-size:10pt; background:#fff; }
+      .document { width:100%; padding:0; }
+      .document-header { min-height:auto; padding:18mm 0; }
+      .section { padding:8mm 0; break-inside:avoid; }
+      h1 { font-size:36pt; }
+      .item,.flow-box,.worker-row div,.table-wrap { background:#fff; }
+      a { text-decoration:none; }
+      .table-wrap { overflow:visible; }
+      table { min-width:0; }
+      .sources { columns:2; }
+    }
+  </style>
+</head>
+<body>
+<div class="document">
+  <div class="document-header">
+    <p class="kicker">Operational briefing / current architecture</p>
+    <h1>mfactory,<br>as it exists now</h1>
+    <p class="lede">A system for turning short-lived coding agents into a traceable product-building loop. The architecture is broader than the machinery shipped today; this document marks that boundary explicitly.</p>
+    <p class="asof">Truth date: 10 July 2026 &middot; Built, manual substitute, and planned are distinct states.</p>
+    <ul class="legend"><li class="built"><span class="dot">&nbsp;</span>Built</li><li class="manual"><span class="dot">&nbsp;</span>Manual substitute</li><li class="planned"><span class="dot">&nbsp;</span>Planned</li></ul>
+  </div>
+
+  <div class="section" id="system">
+    <p class="eyebrow">01 / Control model</p><h2>Roles isolate responsibility</h2>
+    <div class="flow">
+      <div class="flow-box"><strong>Owner</strong><span>Persistent mission-holder and operator contact. Fires verbs and records steering.</span></div>
+      <div class="arrow">&rarr;</div>
+      <div class="flow-box"><strong>Foreman</strong><span>Fresh per cycle. Selects ready work, briefs workers, judges facts, reports and exits.</span></div>
+      <div class="worker-row"><div>Builder</div><div>Reviewer</div><div>QA / Synth</div></div>
+    </div>
+    <p>Workers are fresh and mutually isolated: Builder implements one work order; Reviewer sees the change without builder reasoning and flags rather than rewrites; QA drives the product without build context. State must survive in files because no role relies on another role's context window. <cite><a href="https://github.com/immaculatecross/mfactory/blob/master/ARCHITECTURE.md">Architecture: roles</a> &middot; <a href="https://github.com/immaculatecross/mfactory/blob/master/DECISIONS.md">D-002, D-003, D-007</a></cite></p>
+    <p class="note"><strong>Mora reality:</strong> Codex is manually acting as the missing Owner and dispatcher. It also substitutes for the not-yet-built task graph, Define, QA, and Ship automation.</p>
+  </div>
+
+  <div class="section" id="layers">
+    <p class="eyebrow">02 / Thin core</p><h2>Three layers hold the system together</h2>
+    <div class="grid-3">
+      <div class="item"><h3>Artifacts</h3><span class="status built"><span class="dot">&nbsp;</span>Core exists</span><p>PRODUCT, DECISIONS, FEATURES, STATE, LOG, CONTROL, contracts and per-PR work orders make state durable and auditable.</p></div>
+      <div class="item"><h3>Verbs</h3><span class="status manual"><span class="dot">&nbsp;</span>Partial</span><p>Build and review playbooks exist. Define, QA, Ship and maintenance entry points remain roadmap work.</p></div>
+      <div class="item"><h3>Enforcement</h3><span class="status manual"><span class="dot">&nbsp;</span>Partial</span><p>Hooks, CI, tripwires, size/docs/test rules, coverage ratchet and review audit exist; some promised checks do not.</p></div>
+    </div>
+    <p>The operating modes are broader than the current executable surface:</p>
+    <div class="mode-strip"><div><strong>Define</strong><small>Ideate, decide, pin contracts</small></div><div><strong>Build</strong><small>One gated PR at a time</small></div><div><strong>Ship</strong><small>Deploy and audit docs</small></div><div><strong>Maintain</strong><small>Triage and improve on schedule</small></div></div>
+  </div>
+
+  <div class="section" id="lifecycle">
+    <p class="eyebrow">03 / Unit of work</p><h2>One feature, one branch, one PR</h2>
+    <div class="lifecycle"><div><strong>1. Brief</strong><small>Foreman writes one bounded work order.</small></div><div><strong>2. Build</strong><small>Fresh Builder implements, tests, logs, pushes.</small></div><div><strong>3. Gate</strong><small>CI and isolated review judge the head SHA.</small></div><div><strong>4. Merge</strong><small>Only green CI + approved audited verdict.</small></div></div>
+    <p>Any repair creates a new SHA, which invalidates the old review and reruns the gates. The Foreman allows one repair path, then records a block instead of looping indefinitely. <cite><a href="https://github.com/immaculatecross/mfactory/blob/master/verbs/build.md">Build playbook</a> &middot; <a href="https://github.com/immaculatecross/mfactory/blob/master/verbs/review.md">Review playbook</a> &middot; <a href="https://github.com/immaculatecross/mfactory/pull/6">PR #6: atomic verdict audit</a></cite></p>
+  </div>
+
+  <div class="section" id="truth">
+    <p class="eyebrow">04 / Promise versus reality</p><h2>What is operational today</h2>
+    <div class="table-wrap"><table summary="Current operational status of mfactory capabilities">
+      <thead><tr><th>Capability</th><th>Status</th><th>Current truth</th></tr></thead>
+      <tbody>
+        <tr><td>Foundations, F-001&ndash;F-005</td><td><span class="status built"><span class="dot">&nbsp;</span>Built</span></td><td>Founding artifacts, scaffolder, armed hooks, CI, build/review playbooks, required <code>review</code> status, and atomic review-verdict audit with regression tests exist.</td></tr>
+        <tr><td>Durable state</td><td><span class="status built"><span class="dot">&nbsp;</span>Built</span></td><td><code>STATE.md</code> and the markdown artifact layer are in use; fresh sessions reread them.</td></tr>
+        <tr><td>Task graph / Beads sync</td><td><span class="status planned"><span class="dot">&nbsp;</span>Planned</span></td><td>F-006 backlog. Readiness is selected manually from <code>FEATURES.md</code>.</td></tr>
+        <tr><td>OpenClaw + WhatsApp Owner</td><td><span class="status planned"><span class="dot">&nbsp;</span>Planned</span></td><td>F-007 backlog. Codex currently performs the orchestration manually.</td></tr>
+        <tr><td>Define, QA and Ship verbs</td><td><span class="status manual"><span class="dot">&nbsp;</span>Manual</span></td><td>F-008&ndash;F-010 backlog. Mora uses explicit work orders and human-led substitutions.</td></tr>
+        <tr><td>Maintenance + feedback</td><td><span class="status planned"><span class="dot">&nbsp;</span>Planned</span></td><td>F-011&ndash;F-013 backlog; no scheduled maintenance or operational feedback pipeline.</td></tr>
+        <tr><td>Dogfood exit test</td><td><span class="status planned"><span class="dot">&nbsp;</span>Planned</span></td><td>F-014 backlog. The current Mora run is an early manual rehearsal, not completion of the v1 exit test: a deployed language-learning app built with human input limited to WhatsApp approvals.</td></tr>
+        <tr><td>Harness hooks</td><td><span class="status planned"><span class="dot">&nbsp;</span>Planned</span></td><td>Described in architecture, but PostToolUse/Stop integration is not shipped.</td></tr>
+        <tr><td>Boundary + complexity lint</td><td><span class="status planned"><span class="dot">&nbsp;</span>Incomplete</span></td><td>The 500-line cap is armed; complete import-boundary and complexity enforcement is not.</td></tr>
+      </tbody>
+    </table></div>
+    <p><cite><a href="https://github.com/immaculatecross/mfactory/blob/master/FEATURES.md">Feature ledger</a> &middot; <a href="https://github.com/immaculatecross/mfactory/tree/master/enforcement">Enforcement source</a> &middot; <a href="https://github.com/immaculatecross/mfactory/pull/6">Merged audit and tests</a></cite></p>
+  </div>
+
+  <div class="section" id="mora">
+    <p class="eyebrow">05 / Observed dogfood</p><h2>Mora exposed both value and friction</h2>
+    <ol class="timeline">
+      <li><div><strong>Bootstrap was coupled.</strong><p>Define artifacts could not pass the scaffold's deliberately failing tool scripts alone, so the first feature also had to establish the toolchain.</p></div></li>
+      <li><div><strong>The first Builder ended unexpectedly.</strong><p>The session terminated unexpectedly after leaving usable uncommitted work. A replacement recovered from the dirty worktree because no factory timeout, heartbeat, or restart path exists.</p></div></li>
+      <li><div><strong>Review found a real false green.</strong><p>The first Reviewer showed that coverage measured only <code>page.tsx</code> and CI skipped a production build that rewrote tracked TypeScript config.</p></div></li>
+      <li><div><strong>The single repair path worked.</strong><p>The Builder repaired coverage scope and build idempotence, then CI reran on the new commit.</p></div></li>
+      <li><div><strong>The new SHA required fresh review.</strong><p>The build playbook dispatches review only after green CI; branch protection independently requires both checks before Mora PR #1 can merge.</p></div></li>
+    </ol>
+    <p><cite><a href="https://github.com/immaculatecross/mora/blob/master/learnings.md">Mora L-001&ndash;L-006</a> &middot; <a href="https://github.com/immaculatecross/mora/pull/1">Mora PR #1 and checks</a></cite></p>
+  </div>
+
+  <div class="section" id="time">
+    <p class="eyebrow">06 / Why a cycle takes time</p><h2>Verification latency is not orchestration latency</h2>
+    <div class="cost">
+      <div class="article"><h3>Productive gate latency</h3><ul><li>Fresh sessions reread durable artifacts instead of inheriting hidden context.</li><li>CI executes tripwires, secret scan, code gates, coverage and PR rules.</li><li>Independent review attempts to falsify green results.</li><li>Every repair gets a new SHA, fresh CI and a fresh verdict.</li></ul><p>This time buys evidence, isolation and an auditable merge.</p></div>
+      <div class="article"><h3>Avoidable orchestration friction</h3><ul><li>Manual worker dispatch and status polling.</li><li>No timeout, heartbeat or automatic crash recovery.</li><li>Manual readiness selection without the task graph.</li><li>Shared reviewer credential and no scaffold sync/version path.</li></ul><p>This time is accidental and should be engineered out.</p></div>
+    </div>
+  </div>
+
+  <div class="section" id="queue">
+    <p class="eyebrow">07 / Improvement queue</p><h2>Lessons from Mora, not shipped claims</h2>
+    <ol class="priority-list"><li><strong>L-001</strong> Generate a Define bootstrap when a scaffold lacks one.</li><li><strong>L-002</strong> Formalize the F-000 coupling or permit a narrow pre-toolchain docs gate.</li><li><strong>L-003</strong> Separate reviewer credentials and enforce actor independence.</li><li><strong>L-004</strong> Stamp factory version and provide a reviewable scaffold sync path.</li><li><strong>L-005</strong> Add worker timeout, heartbeat, restart and dirty-worktree recovery reporting.</li><li><strong>L-006</strong> Add scaffold-owned coverage-scope and production-build idempotence gates.</li></ol>
+  </div>
+
+  <div class="section" id="sources">
+    <p class="eyebrow">08 / Read the source</p><h2>Evidence map</h2>
+    <ul class="sources"><li><a href="https://github.com/immaculatecross/mfactory/blob/master/PRODUCT.md">PRODUCT.md</a> &mdash; mission and principles</li><li><a href="https://github.com/immaculatecross/mfactory/blob/master/ARCHITECTURE.md">ARCHITECTURE.md</a> &mdash; intended roles, layers, modes</li><li><a href="https://github.com/immaculatecross/mfactory/blob/master/FEATURES.md">FEATURES.md</a> &mdash; shipped/backlog boundary</li><li><a href="https://github.com/immaculatecross/mfactory/blob/master/STATE.md">STATE.md</a> &mdash; current operational brief</li><li><a href="https://github.com/immaculatecross/mfactory/blob/master/verbs/build.md">verbs/build.md</a> &mdash; PR loop</li><li><a href="https://github.com/immaculatecross/mfactory/blob/master/verbs/review.md">verbs/review.md</a> &mdash; isolated verdict</li><li><a href="https://github.com/immaculatecross/mfactory/tree/master/enforcement">enforcement/</a> &mdash; deterministic layer</li><li><a href="https://github.com/immaculatecross/mfactory/pull/6">mfactory PR #6</a> &mdash; atomic verdict audit</li><li><a href="https://github.com/immaculatecross/mora/blob/master/learnings.md">Mora learnings</a> &mdash; L-001&ndash;L-006</li><li><a href="https://github.com/immaculatecross/mora/pull/1">Mora PR #1</a> &mdash; observed lifecycle</li></ul>
+  </div>
+  <div class="document-footer">Standalone architecture explainer &middot; No runtime, external assets, or hidden shipped-state assumptions.</div>
+</div>
+</body>
+</html>

@@ -86,7 +86,7 @@ while [ "$CYCLE" -le "$MAX" ]; do
     *)
       die "cycle $CYCLE: the report's final line is not its sentinel — stopping fail-safe." \
           "Fix: read $LOG; remove output after the one final 'NEXT: continue'" \
-          "or 'NEXT: stop <reason>' line (verbs/build.md step 7)." ;;
+          "or 'NEXT: stop <reason>' line (verbs/build.md step 8)." ;;
   esac
 done
 die "cycle cap $MAX reached with work remaining." \

@@ -25,8 +25,9 @@ Read, in order: `STATE.md`, `FEATURES.md`, `CONTROL.md`, the last two `LOG.md` e
    - `done` and CI is green → dispatch a fresh **review** session (`.mfactory/verbs/review.md`) on the PR. Merge (squash) only when CI is green, the `review` status is success, **and** `enforcement/ci/review-audit.sh <owner/repo> <n>` (in products: `.mfactory/ci/review-audit.sh`) confirms a genuine verdict for the head SHA. If the reviewer requests changes, treat its BLOCKING findings as a repair work order.
    - CI failed, or review requested changes → dispatch **one** repair session: same work order with the failure output or findings appended. New commits void the old review — re-dispatch it. If the second attempt fails, mark the feature `blocked` in the next PR, log why, and move on. Never repair endlessly.
    - `blocked` or `split` → do what the report asks (answer the blocker, or split the feature into smaller FEATURES.md entries) before any re-dispatch.
-6. **Report** to the Owner (or stdout if no Owner is connected): 3–6 sentences — what merged, what failed and why, what's next, anything Mattia should decide.
-7. **End the cycle** — one cycle per session (D-003); never loop internally. The last line of your report is exactly one sentinel, which the loop driver (`bin/mfactory-loop`) reads to decide whether to dispatch a fresh Foreman: `NEXT: continue` (ready work remains) or `NEXT: stop <reason>` (none ready, CONTROL said stop, or blocked).
+6. **Verify post-merge state.** After every merge, compare the merged `STATE.md` with the resulting `master` truth. If it is stale, make artifact repair the next work unit before selecting more feature work.
+7. **Report** to the Owner (or stdout if no Owner is connected): 3–6 sentences — what merged, what failed and why, what's next, anything Mattia should decide.
+8. **End the cycle** — one cycle per session (D-003); never loop internally. The last line of your report is exactly one sentinel, which the loop driver (`bin/mfactory-loop`) reads to decide whether to dispatch a fresh Foreman: `NEXT: continue` (ready work remains) or `NEXT: stop <reason>` (none ready, CONTROL said stop, or blocked).
 
 ## Rules
 

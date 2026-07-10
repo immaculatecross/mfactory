@@ -47,6 +47,6 @@ None (mfactory itself; ARCHITECTURE §Roles and D-003/D-014 govern).
 RESULT: done
 Branch/PR: `feat/loop-driver` — https://github.com/immaculatecross/mfactory/pull/9
 Changed:   New driver with brake, strict final-sentinel protocol, cycle cap, collision-proof per-cycle logs, and a pluggable harness.
-Changed:   `verbs/build.md` step 7 emits the sentinel and forbids internal looping; runtime state gitignored in mfactory and product template.
+Changed:   `verbs/build.md` step 8 emits the sentinel and forbids internal looping; runtime state gitignored in mfactory and product template.
 Verified:  `bash -n`; loop-driver suite green, including adversarial sentinel, rapid-invocation, full-log, and remediation assertions; review-audit suite 18/18; tripwires clean.
 Risks:     The sentinel is trusted from the Foreman's stdout — a lying report can stop early (fail-safe) but a `NEXT: continue` cannot bypass the cap; real merge safety stays with CI, review, and the audit.
