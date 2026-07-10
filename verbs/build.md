@@ -26,7 +26,7 @@ Read, in order: `STATE.md`, `FEATURES.md`, `CONTROL.md`, the last two `LOG.md` e
    - CI failed, or review requested changes → dispatch **one** repair session: same work order with the failure output or findings appended. New commits void the old review — re-dispatch it. If the second attempt fails, mark the feature `blocked` in the next PR, log why, and move on. Never repair endlessly.
    - `blocked` or `split` → do what the report asks (answer the blocker, or split the feature into smaller FEATURES.md entries) before any re-dispatch.
 6. **Report** to the Owner (or stdout if no Owner is connected): 3–6 sentences — what merged, what failed and why, what's next, anything Mattia should decide.
-7. **Loop** to step 1 while ready work remains.
+7. **End the cycle** — one cycle per session (D-003); never loop internally. The last line of your report is exactly one sentinel, which the loop driver (`bin/mfactory-loop`) reads to decide whether to dispatch a fresh Foreman: `NEXT: continue` (ready work remains) or `NEXT: stop <reason>` (none ready, CONTROL said stop, or blocked).
 
 ## Rules
 

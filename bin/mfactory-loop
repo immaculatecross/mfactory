@@ -1,0 +1,77 @@
+#!/bin/bash
+# mfactory-loop — the autonomy spine: a fresh Foreman session per cycle (D-003).
+#
+#   mfactory-loop [--dir <repo>] [--max-cycles N]
+#
+# Each cycle checks the emergency brake, dispatches one fresh Foreman session
+# on the build verb, logs its full output to .mfactory/loop/, and reads the
+# report's final sentinel line to decide what happens next:
+#   NEXT: continue        ready work remains — dispatch a fresh Foreman
+#   NEXT: stop <reason>   no ready work, CONTROL said stop, or blocked
+# A missing sentinel stops the loop (fail safe).
+#
+# Emergency brake (D-014): `touch .mfactory/STOP` halts before the next cycle;
+# remove the file to resume. Ordinary steering goes in CONTROL.md as usual.
+#
+# Harness (D-009): $MFACTORY_AGENT_CMD is invoked with the boot prompt as its
+# single appended argument (default: claude -p --permission-mode acceptEdits).
+#
+# Exit: 0 clean stop · 1 failure (agent crash, no sentinel, cycle cap) · 2 brake
+set -uo pipefail
+
+die() { printf 'BLOCKED: %s\n' "$1" >&2; shift; for l in "$@"; do printf '  %s\n' "$l" >&2; done; exit 1; }
+
+DIR="$PWD"; MAX=8
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dir)        DIR="${2:?--dir needs a path}"; shift 2 ;;
+    --max-cycles) MAX="${2:?--max-cycles needs a number}"; shift 2 ;;
+    *) die "unknown argument: $1" "Fix: mfactory-loop [--dir <repo>] [--max-cycles N]" ;;
+  esac
+done
+printf '%s' "$MAX" | grep -qE '^[1-9][0-9]*$' \
+  || die "--max-cycles must be a positive integer, got '$MAX'." \
+         "Fix: pass a number; the cap is a runaway leash, not a quota."
+
+cd "$DIR" || die "cannot cd to $DIR." "Fix: pass an existing product repo with --dir."
+if   [ -f .mfactory/verbs/build.md ]; then VERB=.mfactory/verbs/build.md
+elif [ -f verbs/build.md ];           then VERB=verbs/build.md
+else die "no build verb found in $DIR." \
+         "Fix: run inside a scaffolded product (.mfactory/verbs/build.md) or mfactory itself."
+fi
+
+LOGDIR=.mfactory/loop
+mkdir -p "$LOGDIR"
+PROMPT="You are a fresh session with no prior context. Read AGENTS.md, then execute $VERB as the Foreman for exactly one cycle. End your report with exactly one line: 'NEXT: continue' if ready work remains, or 'NEXT: stop <reason>' otherwise."
+
+CYCLE=1
+while [ "$CYCLE" -le "$MAX" ]; do
+  if [ -e .mfactory/STOP ]; then
+    echo "loop: emergency brake is on ($DIR/.mfactory/STOP)." >&2
+    echo "  Fix: remove the file to resume — rm .mfactory/STOP" >&2
+    exit 2
+  fi
+  LOG="$LOGDIR/$(date +%Y%m%d-%H%M%S)-cycle$CYCLE.log"
+  echo "loop: cycle $CYCLE/$MAX — dispatching a fresh Foreman (log: $LOG)"
+  # Unquoted on purpose: the variable is a command line and must word-split.
+  if [ -n "${MFACTORY_AGENT_CMD:-}" ]; then
+    $MFACTORY_AGENT_CMD "$PROMPT" >"$LOG" 2>&1
+  else
+    claude -p --permission-mode acceptEdits "$PROMPT" >"$LOG" 2>&1
+  fi || die "cycle $CYCLE: the agent exited non-zero." \
+            "Fix: read $LOG; the artifacts are untouched by the driver — rerun when resolved."
+  SENTINEL=$(grep -E '^NEXT: (continue$|stop( |$))' "$LOG" | tail -1)
+  case "$SENTINEL" in
+    "NEXT: continue")
+      CYCLE=$((CYCLE + 1)) ;;
+    "NEXT: stop"*)
+      echo "loop: Foreman stopped after cycle $CYCLE — ${SENTINEL#NEXT: stop }"
+      exit 0 ;;
+    *)
+      die "cycle $CYCLE: no sentinel in the Foreman's report — stopping fail-safe." \
+          "Fix: read $LOG; the Foreman must end its report with 'NEXT: continue'" \
+          "or 'NEXT: stop <reason>' (verbs/build.md step 7)." ;;
+  esac
+done
+die "cycle cap $MAX reached with work remaining." \
+    "Fix: rerun to continue, or raise --max-cycles deliberately after reading the logs."
