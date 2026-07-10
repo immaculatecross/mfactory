@@ -1,0 +1,8 @@
+# Vendored reference — loot, don't import (D-001)
+gstack-main/
+
+.DS_Store
+node_modules/
+*.log
+.env
+.env.*
