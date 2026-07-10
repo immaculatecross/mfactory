@@ -35,11 +35,18 @@ None (mfactory itself; ARCHITECTURE §Roles and D-003/D-014 govern).
 - The OpenClaw Owner (F-007) — the driver is what the Owner will call, not the Owner itself.
 - Waiting on CI or merging — those live inside the Foreman's cycle, not the driver.
 
-## Exit report
+## Repair findings (first review, head 7a9bdec — request-changes)
+
+- BLOCKING: the parser accepted a sentinel before trailing output, conflicting sentinels, and a bare `NEXT: stop` without a reason.
+- BLOCKING: second-resolution log names let rapid invocations overwrite a cycle log.
+- BLOCKING: missing option values exited through Bash parameter expansion without a `Fix:` instruction.
+- BLOCKING: tests discarded driver messages, so removing remediation text or agent stderr logging left the suite green.
+
+## Exit report (after the one permitted repair)
 
 RESULT: done
-Branch/PR: `feat/loop-driver` — PR pending
-Changed:   New driver with brake, sentinel protocol, cycle cap, per-cycle logs, pluggable harness; 12 end-to-end tests with a fake agent.
+Branch/PR: `feat/loop-driver` — https://github.com/immaculatecross/mfactory/pull/9
+Changed:   New driver with brake, strict final-sentinel protocol, cycle cap, collision-proof per-cycle logs, and a pluggable harness.
 Changed:   `verbs/build.md` step 7 emits the sentinel and forbids internal looping; runtime state gitignored in mfactory and product template.
-Verified:  `bash -n`; `enforcement/tests/mfactory-loop.test.sh` (12/12 ok); review-audit suite still 18/18; tripwires clean.
+Verified:  `bash -n`; loop-driver suite green, including adversarial sentinel, rapid-invocation, full-log, and remediation assertions; review-audit suite 18/18; tripwires clean.
 Risks:     The sentinel is trusted from the Foreman's stdout — a lying report can stop early (fail-safe) but a `NEXT: continue` cannot bypass the cap; real merge safety stays with CI, review, and the audit.

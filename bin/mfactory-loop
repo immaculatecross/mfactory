@@ -24,8 +24,14 @@ die() { printf 'BLOCKED: %s\n' "$1" >&2; shift; for l in "$@"; do printf '  %s\n
 DIR="$PWD"; MAX=8
 while [ $# -gt 0 ]; do
   case "$1" in
-    --dir)        DIR="${2:?--dir needs a path}"; shift 2 ;;
-    --max-cycles) MAX="${2:?--max-cycles needs a number}"; shift 2 ;;
+    --dir)
+      [ "$#" -ge 2 ] || die "--dir needs a path." \
+        "Fix: pass --dir <repo>."
+      DIR="$2"; shift 2 ;;
+    --max-cycles)
+      [ "$#" -ge 2 ] || die "--max-cycles needs a number." \
+        "Fix: pass --max-cycles <positive integer>."
+      MAX="$2"; shift 2 ;;
     *) die "unknown argument: $1" "Fix: mfactory-loop [--dir <repo>] [--max-cycles N]" ;;
   esac
 done
@@ -51,7 +57,9 @@ while [ "$CYCLE" -le "$MAX" ]; do
     echo "  Fix: remove the file to resume — rm .mfactory/STOP" >&2
     exit 2
   fi
-  LOG="$LOGDIR/$(date +%Y%m%d-%H%M%S)-cycle$CYCLE.log"
+  LOG=$(mktemp "$LOGDIR/$(date +%Y%m%d-%H%M%S)-cycle$CYCLE.log.XXXXXX") \
+    || die "cycle $CYCLE: could not create a unique log." \
+           "Fix: check that $DIR/$LOGDIR exists and is writable, then rerun."
   echo "loop: cycle $CYCLE/$MAX — dispatching a fresh Foreman (log: $LOG)"
   # Unquoted on purpose: the variable is a command line and must word-split.
   if [ -n "${MFACTORY_AGENT_CMD:-}" ]; then
@@ -60,17 +68,25 @@ while [ "$CYCLE" -le "$MAX" ]; do
     claude -p --permission-mode acceptEdits "$PROMPT" >"$LOG" 2>&1
   fi || die "cycle $CYCLE: the agent exited non-zero." \
             "Fix: read $LOG; the artifacts are untouched by the driver — rerun when resolved."
-  SENTINEL=$(grep -E '^NEXT: (continue$|stop( |$))' "$LOG" | tail -1)
+  SENTINELS=$(awk '{
+    sub(/\r$/, "")
+    if ($0 == "NEXT: continue" || $0 ~ /^NEXT: stop .+$/) n++
+  } END { print n + 0 }' "$LOG")
+  [ "$SENTINELS" -eq 1 ] \
+    || die "cycle $CYCLE: expected exactly one valid sentinel, found $SENTINELS." \
+           "Fix: the Foreman must emit one final line: 'NEXT: continue' or" \
+           "'NEXT: stop <reason>'; remove earlier, duplicate, or bare sentinels."
+  SENTINEL=$(tail -n 1 "$LOG" | tr -d '\r')
   case "$SENTINEL" in
     "NEXT: continue")
       CYCLE=$((CYCLE + 1)) ;;
-    "NEXT: stop"*)
+    "NEXT: stop "?*)
       echo "loop: Foreman stopped after cycle $CYCLE — ${SENTINEL#NEXT: stop }"
       exit 0 ;;
     *)
-      die "cycle $CYCLE: no sentinel in the Foreman's report — stopping fail-safe." \
-          "Fix: read $LOG; the Foreman must end its report with 'NEXT: continue'" \
-          "or 'NEXT: stop <reason>' (verbs/build.md step 7)." ;;
+      die "cycle $CYCLE: the report's final line is not its sentinel — stopping fail-safe." \
+          "Fix: read $LOG; remove output after the one final 'NEXT: continue'" \
+          "or 'NEXT: stop <reason>' line (verbs/build.md step 7)." ;;
   esac
 done
 die "cycle cap $MAX reached with work remaining." \
