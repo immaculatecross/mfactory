@@ -33,7 +33,7 @@ mk_agent() { # $1 = repo, $2 = body of the fake agent (sees $n = call number)
   cat > "$1/agent" <<EOF
 #!/bin/bash
 [ "\$#" -eq 1 ] || exit 90
-case "\$1" in *"execute "*"build.md"*"NEXT: continue"*"NEXT: stop <reason>"*) ;; *) exit 91 ;; esac
+EXPECTED="You are a fresh session with no prior context. Read AGENTS.md, then execute .mfactory/verbs/build.md as the Foreman for exactly one cycle. End your report with exactly one line: 'NEXT: continue' if ready work remains, or 'NEXT: stop <reason>' otherwise."; [ "\$1" = "\$EXPECTED" ] || exit 91
 d="\$(dirname "\$0")"
 n=\$(( \$(cat "\$d/calls" 2>/dev/null || echo 0) + 1 ))
 echo "\$n" > "\$d/calls"
