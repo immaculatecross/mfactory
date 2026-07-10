@@ -22,7 +22,7 @@ Read, in order: `STATE.md`, `FEATURES.md`, `CONTROL.md`, the last two `LOG.md` e
    ```
 
 5. **Judge the result** by the builder's exit report and the facts (branch, PR, checks). Verify with the committed gate commands and tests — never improvised shell (D-017).
-   - `done` and CI is green → dispatch a fresh **review** session (`.mfactory/verbs/review.md`) on the PR. Merge (squash) only when CI is green **and** the `review` status is success. If the reviewer requests changes, treat its BLOCKING findings as a repair work order.
+   - `done` and CI is green → dispatch a fresh **review** session (`.mfactory/verbs/review.md`) on the PR. Merge (squash) only when CI is green, the `review` status is success, **and** `enforcement/ci/review-audit.sh <owner/repo> <n>` (in products: `.mfactory/ci/review-audit.sh`) confirms a genuine verdict for the head SHA. If the reviewer requests changes, treat its BLOCKING findings as a repair work order.
    - CI failed, or review requested changes → dispatch **one** repair session: same work order with the failure output or findings appended. New commits void the old review — re-dispatch it. If the second attempt fails, mark the feature `blocked` in the next PR, log why, and move on. Never repair endlessly.
    - `blocked` or `split` → do what the report asks (answer the blocker, or split the feature into smaller FEATURES.md entries) before any re-dispatch.
 6. **Report** to the Owner (or stdout if no Owner is connected): 3–6 sentences — what merged, what failed and why, what's next, anything Mattia should decide.

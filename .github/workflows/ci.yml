@@ -18,10 +18,19 @@ jobs:
                   enforcement/hooks/pre-commit \
                   enforcement/hooks/commit-msg \
                   enforcement/hooks/run-tripwires.sh \
-                  enforcement/ci/pr-rules.sh
+                  enforcement/ci/pr-rules.sh \
+                  enforcement/ci/review-audit.sh \
+                  enforcement/tests/*.test.sh
 
       - name: Tripwires on this repo
         run: enforcement/hooks/run-tripwires.sh --all
+
+      - name: Enforcement pack tests
+        run: |
+          for t in enforcement/tests/*.test.sh; do
+            echo "== $t"
+            "$t"
+          done
 
       - name: Scaffold smoke test — bad commit blocked, clean commit passes
         run: |
