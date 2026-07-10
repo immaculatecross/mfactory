@@ -28,16 +28,16 @@ None (mfactory itself; ARCHITECTURE §Roles and D-003/D-014 govern).
 - The OpenClaw Owner (F-007) — the driver is what the Owner will call, not the Owner itself.
 - Waiting on CI or merging — those live inside the Foreman's cycle, not the driver.
 
-## Prior blocked attempt consolidated (PR #9)
-- Sentinel parsing accepted trailing/conflicting/bare/whitespace-only stops; scenario tests missed the protocol invariant.
-- Logs collided, and concurrent invocations could dispatch two Foremen against the same ready work.
+## Findings consolidated (PR #9; PR #10 first review)
+- Sentinel parsing accepted trailing/conflicting/bare/whitespace-only stops, including a valid earlier stop followed by an invalid final stop.
+- Logs collided; concurrent invocations could dispatch two Foremen; the first lock test did not race acquisition; TERM could wait forever on a resistant agent.
 - Missing option values lacked fixes; spaced harness paths failed; the `--dir` brake fix named the caller's repo.
 - Tests ignored driver messages and stderr, so mutations removing remediation or full logging stayed green.
 
 ## Exit report
 RESULT: done
 Branch/PR: `feat/loop-driver-v2` — https://github.com/immaculatecross/mfactory/pull/10
-Changed:   Singleton driver with stale-lock diagnosis, strict final sentinel, unique full logs, target-qualified brake, cycle cap, and quoting-safe harness path.
+Changed:   Atomic singleton with stale-lock diagnosis and bounded TERM→KILL cleanup; strict final sentinel, unique full logs, target-qualified brake, cycle cap, and quoting-safe harness path.
 Changed:   `verbs/build.md` step 8 emits the sentinel and forbids internal looping; all runtime state is gitignored in mfactory and product templates.
-Verified:  `bash -n`; invariant suite covers true concurrency, stale/released locks, sentinel attacks, collisions, full logs, spaced paths, and remediation; audit 18/18; tripwires clean.
-Risks:     SIGKILL can leave a stale lock requiring the printed manual recovery; real merge safety remains with CI, isolated review, and the verdict audit.
+Verified:  `bash -n`; suite races simultaneous starts, resists ignored TERM, and covers stale/released locks, compound sentinel attacks, collisions, full logs, spaced paths, and remediation; audit 18/18; tripwires clean.
+Risks:     SIGKILL can leave a stale lock; PID reuse may label it active but fails closed. Printed recovery requires ownership verification; merge safety stays with CI, review, and audit.

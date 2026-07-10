@@ -2,10 +2,8 @@
 # Tests for bin/mfactory-loop — the driver is exercised end to end with a fake
 # harness ($MFACTORY_AGENT_CMD), never a real agent.
 set -uo pipefail
-
 LOOP="$(cd "$(dirname "$0")/../.." && pwd)/bin/mfactory-loop"
 FAIL=0
-
 check() { # $1 = case name, $2 = expected exit code, $3 = actual exit code
   if [ "$3" = "$2" ]; then
     echo "ok: $1"
@@ -15,7 +13,6 @@ check() { # $1 = case name, $2 = expected exit code, $3 = actual exit code
     FAIL=1
   fi
 }
-
 contains() { # $1 = case name, $2 = file, $3 = fixed string
   if grep -qF -- "$3" "$2"; then
     echo "ok: $1"
@@ -25,7 +22,6 @@ contains() { # $1 = case name, $2 = file, $3 = fixed string
     FAIL=1
   fi
 }
-
 mk_repo() { # a minimal fake product; prints its path
   r=$(mktemp -d)
   mkdir -p "$r/.mfactory/verbs"
@@ -33,7 +29,6 @@ mk_repo() { # a minimal fake product; prints its path
   echo stub > "$r/AGENTS.md"
   printf '%s' "$r"
 }
-
 mk_agent() { # $1 = repo, $2 = body of the fake agent (sees $n = call number)
   cat > "$1/agent" <<EOF
 #!/bin/bash
@@ -45,12 +40,10 @@ $2
 EOF
   chmod +x "$1/agent"
 }
-
 calls() { cat "$1/calls" 2>/dev/null || echo 0; }
 dispatches() {
   if [ -f "$1/dispatches" ]; then wc -l < "$1/dispatches" | tr -d ' '; else echo 0; fi
 }
-
 # Continues twice, then stops: three cycles, clean exit, three complete logs.
 R=$(mk_repo); mk_agent "$R" '
 echo "cycle report body"
@@ -75,30 +68,36 @@ chmod +x "$R/fake-bin/date"
 PATH="$R/fake-bin:$PATH" MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>&1
 PATH="$R/fake-bin:$PATH" MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>&1
 check "rapid invocations keep both cycle logs" 2 "$(ls "$R/.mfactory/loop" | wc -l | tr -d ' ')"
-# The repo-local lock permits only one live driver and releases on clean exit.
+# Two gated processes race lock acquisition; exactly one may dispatch.
 R=$(mk_repo); mk_agent "$R" '
 touch "$d/started"
 while [ ! -e "$d/release" ]; do sleep 0.05; done
 echo "NEXT: stop released"'
-MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/first-err" &
-FIRST_PID=$!
+(while [ ! -e "$R/go" ]; do sleep 0.01; done
+ MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R") >/dev/null 2>"$R/one-err" &
+ONE_PID=$!
+(while [ ! -e "$R/go" ]; do sleep 0.01; done
+ MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R") >/dev/null 2>"$R/two-err" &
+TWO_PID=$!
+touch "$R/go"
 N=0
 while [ ! -e "$R/started" ] && [ "$N" -lt 100 ]; do sleep 0.05; N=$((N + 1)); done
-[ -e "$R/started" ]
-check "first concurrent driver reached its agent" 0 $?
-MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/second-err"
-check "second concurrent driver is blocked" 1 $?
+sleep 0.1; touch "$R/release"
+wait "$ONE_PID"; ONE_STATUS=$?
+wait "$TWO_PID"; TWO_STATUS=$?
+case "$ONE_STATUS:$TWO_STATUS" in
+  0:1) RESULT=pass; LOCK_ERR="$R/two-err" ;;
+  1:0) RESULT=pass; LOCK_ERR="$R/one-err" ;;
+  *)   RESULT=fail; LOCK_ERR="$R/one-err" ;;
+esac
+check "simultaneous drivers produce one success and one block" pass "$RESULT"
 check "  … only one Foreman was dispatched" 1 "$(dispatches "$R")"
-contains "  … active-lock failure identifies the owner" "$R/second-err" "another mfactory loop is running"
-contains "  … active-lock failure states its fix" "$R/second-err" "Fix:"
-touch "$R/release"
-wait "$FIRST_PID"
-check "first concurrent driver stops cleanly" 0 $?
+contains "  … active-lock failure states its fix" "$LOCK_ERR" "Fix:"
 [ ! -e "$R/.mfactory/loop.lock" ]
 check "  … clean exit releases the lock" 0 $?
 # A termination signal reaches the agent and releases repository ownership.
 R=$(mk_repo); mk_agent "$R" '
-trap "exit 0" TERM
+trap "" TERM
 touch "$d/started"
 while :; do sleep 1; done'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err" &
@@ -149,9 +148,9 @@ R=$(mk_repo); mk_agent "$R" 'echo "NEXT: stop"'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
 check "bare stop without a reason fails safe" 1 $?
 contains "  … bare-stop failure states its fix" "$R/err" "Fix:"
-R=$(mk_repo); mk_agent "$R" 'printf "NEXT: stop   \n"'
+R=$(mk_repo); mk_agent "$R" 'printf "NEXT: stop valid reason\nNEXT: stop   \n"'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
-check "space-only stop reason fails safe" 1 $?
+check "valid then whitespace-only final stop fails safe" 1 $?
 R=$(mk_repo); mk_agent "$R" 'printf "NEXT: stop \t\t\n"'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
 check "tab-only stop reason fails safe" 1 $?
@@ -171,7 +170,6 @@ MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" --max-cycles 2 >/dev/null 2>"$R
 check "cycle cap stops a runaway loop" 1 $?
 check "  … dispatched exactly the cap" 2 "$(calls "$R")"
 contains "  … cycle-cap failure states its fix" "$R/err" "Fix:"
-
 # An agent crash stops the loop with the log preserved.
 R=$(mk_repo); mk_agent "$R" 'echo "boom on stdout"; echo "boom on stderr" >&2; exit 9'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
@@ -180,13 +178,11 @@ contains "  … crash failure states its fix" "$R/err" "Fix:"
 for f in "$R"/.mfactory/loop/*; do CRASH_LOG="$f"; break; done
 contains "  … crash log preserves stdout" "$CRASH_LOG" "boom on stdout"
 contains "  … crash log preserves stderr" "$CRASH_LOG" "boom on stderr"
-
 # A directory without the build verb is refused up front.
 R=$(mktemp -d)
 "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
 check "missing build verb is refused" 1 $?
 contains "  … missing-verb failure states its fix" "$R/err" "Fix:"
-
 # Missing option values must fail through die(), not Bash parameter expansion.
 R=$(mktemp -d)
 "$LOOP" --dir >/dev/null 2>"$R/dir-err"
@@ -195,5 +191,4 @@ contains "  … missing --dir value states its fix" "$R/dir-err" "Fix:"
 "$LOOP" --max-cycles >/dev/null 2>"$R/max-err"
 check "missing --max-cycles value is refused" 1 $?
 contains "  … missing --max-cycles value states its fix" "$R/max-err" "Fix:"
-
 exit $FAIL
