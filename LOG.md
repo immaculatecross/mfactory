@@ -45,3 +45,11 @@ The loop's three artifacts exist: `verbs/build.md` (Foreman: boot from files, dr
 Live test: scaffolded a demo product, wrote WO-000 (make the gate scripts real) as Foreman, dispatched a genuinely fresh builder session. Result, independently verified rather than trusted: two conventional commits, 207-line diff (cap 400), zero waivers, docs and exit report riding the same branch, gates green when re-run cold, lint proven to exit 1 on a tracked syntax error, and the builder proactively flagged a scope gap (FEATURES mentioned a coverage ratchet its work order never ordered) instead of improvising — the exact behavior the playbook demands. The PR leg was untested (no remote in local mode); F-004 moves to `verified` at the first real product build.
 
 Meta-lesson recorded: verification produced two false failures before the true verdict — an untracked file outside lint's declared scope, then a shell pipeline masking an exit code. Verification commands are code too; trust committed, tested scripts over ad-hoc shell.
+
+---
+
+## 2026-07-10 — D-017; F-005 built: the adversarial reviewer, wired as a required check
+
+Session retrospective (Mattia asked what to learn) produced one structural change, kept deliberately small: **D-017 — lessons become enforcement, never prose alone.** Encoded as: the decision itself, an AGENTS.md rule line, and the "committed commands, never improvised shell" line in `verbs/build.md`. Bigger ideas (a LESSONS.md, a retro verb) were rejected as overkill for now.
+
+F-005: `verbs/review.md` is the adversarial reviewer — fresh session, world limited to diff + work order + repo (builder reasoning withheld), six-point checklist (fidelity, correctness, tests-are-real, contracts, simplicity, hygiene), findings as BLOCKING/ADVISORY, verdict forced by findings. It flags, never rewrites (D-007). The verdict lands two ways: a PR comment (the traceable artifact) and a `review` commit status on the head SHA (the required check) — no committed files, so the reviewed SHA is the merged SHA, and new commits void the review by construction. `review` is now a required context in the scaffolder's branch protection and on mfactory itself; the Foreman's merge bar is CI-green **and** review-approve. First live dispatch: the PR that ships this very feature — outcome on PR #3.
