@@ -36,7 +36,7 @@ None (mfactory itself; ARCHITECTURE §Roles and D-003/D-014 govern).
 
 ## Exit report
 RESULT: done
-Branch/PR: `feat/loop-driver-v2` — PR pending
+Branch/PR: `feat/loop-driver-v2` — https://github.com/immaculatecross/mfactory/pull/10
 Changed:   Singleton driver with stale-lock diagnosis, strict final sentinel, unique full logs, target-qualified brake, cycle cap, and quoting-safe harness path.
 Changed:   `verbs/build.md` step 8 emits the sentinel and forbids internal looping; all runtime state is gitignored in mfactory and product templates.
 Verified:  `bash -n`; invariant suite covers true concurrency, stale/released locks, sentinel attacks, collisions, full logs, spaced paths, and remediation; audit 18/18; tripwires clean.
