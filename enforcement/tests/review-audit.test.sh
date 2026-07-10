@@ -10,7 +10,9 @@ HEAD="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 OLD="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 FAIL=0
 
-c() { printf '%s' "$1" | base64; }   # one comment body -> one base64 line
+# One comment body -> one base64 line. GNU base64 wraps at 76 chars (BSD does
+# not); tr strips the wraps so the line stays atomic on both.
+c() { printf '%s' "$1" | base64 | tr -d '\n'; }
 
 expect() { # $1 = pass|block, $2 = case name, stdin = base64 comment lines
   input=$(cat)
