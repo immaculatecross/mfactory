@@ -63,3 +63,7 @@ Mattia's WhatsApp messages append to a `CONTROL.md` queue; the Foreman drains it
 ## D-015 · 2026-07-10 · Accepted — Project name is mfactory; repo is immaculatecross/mfactory, default branch master
 
 Renamed from mstack. **Why:** "stack" says pile of tools (gstack's model); "factory" says production line that runs without you, which is the thesis. **Consequences:** all artifacts renamed this day; the GitHub identity model (operator account vs. factory account) is an open question tracked in LOG.md.
+
+## D-016 · 2026-07-10 · Accepted — immaculatecross is the factory's machine identity; matmauro01 is the human's
+
+The factory account owns product repos, is what `gh` authenticates as wherever the loop runs, and is what every factory commit and PR is attributed to. Mattia's own account stays for human review, approvals, and admin. **Why:** accountability stays legible (factory work vs. human work at a glance) and the factory's credentials are scoped and revocable without touching Mattia's account. **Consequences:** `~/.mfactory/owner` = immaculatecross; the factory's token deliberately never gets `delete_repo` scope — destructive powers are withheld by construction, so repo deletion always requires the human.
