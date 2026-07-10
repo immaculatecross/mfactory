@@ -6,7 +6,7 @@ Append-only record of durable decisions. Format: ID, date, status, decision, why
 
 ## D-001 · 2026-07-10 · Accepted — Build our own thin core; loot gstack for parts
 
-gstack (Garry Tan's Claude Code software factory, vendored in `gstack-main/` for reference) covers interactive workflows well but has no autonomous loop, no state machine, heavy prompt mass (25–35K-token skills), and a baked-in personal voice. **Why:** all of mstack's novel value is on the autonomy axis gstack doesn't have; adopting it wholesale imports 54 skills of someone else's opinions. **Consequences:** we borrow its eval-tested prompts (review, QA, investigate, security audit), its browse daemon pattern, its tripwire-test habit, and its event-sourced decision log — and build everything else ourselves.
+gstack (Garry Tan's Claude Code software factory, vendored in `gstack-main/` for reference) covers interactive workflows well but has no autonomous loop, no state machine, heavy prompt mass (25–35K-token skills), and a baked-in personal voice. **Why:** all of mfactory's novel value is on the autonomy axis gstack doesn't have; adopting it wholesale imports 54 skills of someone else's opinions. **Consequences:** we borrow its eval-tested prompts (review, QA, investigate, security audit), its browse daemon pattern, its tripwire-test habit, and its event-sourced decision log — and build everything else ourselves.
 
 ## D-002 · 2026-07-10 · Accepted — Ownership lives in a persona, not a process
 
@@ -36,9 +36,9 @@ Adversarial review runs in an isolated fresh session (diff + spec + repo only, n
 
 Mattia's original eight phases survive as named *gates*, but the machinery is four modes: **Define** (ideate → discuss → plan), **Build** (the PR loop), **Ship** (deploy + docs audit), **Maintain** (cron-triggered). **Why:** final testing, correction, and docs-checking are properties of the loop (iterated, enforced per-PR), not one-shot phases. **Consequences:** each gate is a checklist a script can evaluate; mode transitions notify the Owner.
 
-## D-009 · 2026-07-10 · Accepted — Verb API as the OpenClaw ↔ mstack contract
+## D-009 · 2026-07-10 · Accepted — Verb API as the OpenClaw ↔ mfactory contract
 
-mstack exposes named entry points — `ideate`, `plan`, `build`, `review`, `qa`, `simplify`, `enhance`, `maintain`, `status`, `teach` — each a markdown playbook declaring preconditions, artifacts read/written, and exit-report format. **Why:** verbs are portable skills in any harness (agnosticism requirement) and make OpenClaw integration trivial (cron calls `maintain`; Mattia texts "mstack status"). **Consequences:** anything not reachable through a verb doesn't exist; new capabilities land as new verbs.
+mfactory exposes named entry points — `ideate`, `plan`, `build`, `review`, `qa`, `simplify`, `enhance`, `maintain`, `status`, `teach` — each a markdown playbook declaring preconditions, artifacts read/written, and exit-report format. **Why:** verbs are portable skills in any harness (agnosticism requirement) and make OpenClaw integration trivial (cron calls `maintain`; Mattia texts "mfactory status"). **Consequences:** anything not reachable through a verb doesn't exist; new capabilities land as new verbs.
 
 ## D-010 · 2026-07-10 · Accepted — Synthetic user is a generator, not a validator
 
@@ -54,8 +54,12 @@ A single distilled current-state brief, regenerated after each merge, is the boo
 
 ## D-013 · 2026-07-10 · Accepted — Develop on the Mac, run production on the OpenClaw box
 
-mstack itself is built and iterated locally; product build loops run on Mattia's always-on OpenClaw server, where the Owner lives. **Why:** fire-and-forget from WhatsApp requires surviving a closed laptop lid. **Consequences:** everything must run headless; no Mac-only dependencies in the loop.
+mfactory itself is built and iterated locally; product build loops run on Mattia's always-on OpenClaw server, where the Owner lives. **Why:** fire-and-forget from WhatsApp requires surviving a closed laptop lid. **Consequences:** everything must run headless; no Mac-only dependencies in the loop.
 
 ## D-014 · 2026-07-10 · Accepted — Steering interrupts between PRs, not mid-edit
 
 Mattia's WhatsApp messages append to a `CONTROL.md` queue; the Foreman drains it between work units. **Why:** the PR boundary is the natural checkpoint — state is consistent, gates have run, redirection is cheap. **Consequences:** a true emergency stop (kill the loop) is a separate Owner command, not a queue entry.
+
+## D-015 · 2026-07-10 · Accepted — Project name is mfactory; repo is immaculatecross/mfactory, default branch master
+
+Renamed from mstack. **Why:** "stack" says pile of tools (gstack's model); "factory" says production line that runs without you, which is the thesis. **Consequences:** all artifacts renamed this day; the GitHub identity model (operator account vs. factory account) is an open question tracked in LOG.md.

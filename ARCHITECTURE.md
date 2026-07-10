@@ -1,6 +1,6 @@
 # Architecture
 
-mstack is three thin layers — **artifacts** (durable state), **verbs** (entry points), **enforcement** (deterministic gates) — operated by three roles. Everything else is small prompts.
+mfactory is three thin layers — **artifacts** (durable state), **verbs** (entry points), **enforcement** (deterministic gates) — operated by three roles. Everything else is small prompts.
 
 ## Roles
 
@@ -36,7 +36,7 @@ No role ever depends on another role's context window. A crashed session costs o
 | `LOG.md` | Append-only journal, one entry per cycle/PR. |
 | `CONTROL.md` | Steering queue from WhatsApp; drained by the Foreman between PRs. |
 | `feedback/` | Inbox for real user feedback + synthetic-user reports, pre-triage. |
-| `.mstack/work-orders/` | One brief per PR: spec, acceptance criteria, relevant contracts, the 3–5 files that matter, applicable decisions. |
+| `.mfactory/work-orders/` | One brief per PR: spec, acceptance criteria, relevant contracts, the 3–5 files that matter, applicable decisions. |
 
 ## Layer 2 — Verbs
 
@@ -59,7 +59,7 @@ Each verb is a markdown playbook: preconditions, artifacts read/written, exit-re
 
 **Pre-commit (fast, local):** format; strict lint (TS strict, no `any`, no `ts-ignore`/`eslint-disable` without justification comment); file ≤ 500 lines; function complexity cap; no `console.log`/`debugger`; secret scan (gitleaks); conventional commits.
 
-**CI merge gates (authoritative):** full typecheck + test suite; coverage ratchet (never decreases); changed source ⇒ changed tests or explicit waiver; PR size cap (~400 lines, lockfiles excluded); import-boundary lint on `CONTRACTS/` layers; docs gate (PR touches LOG/FEATURES/CHANGELOG or carries a justified `docs-none` label); reviewer verdict = approve; branch protection on main.
+**CI merge gates (authoritative):** full typecheck + test suite; coverage ratchet (never decreases); changed source ⇒ changed tests or explicit waiver; PR size cap (~400 lines, lockfiles excluded); import-boundary lint on `CONTRACTS/` layers; docs gate (PR touches LOG/FEATURES/CHANGELOG or carries a justified `docs-none` label); reviewer verdict = approve; branch protection on master.
 
 **Harness hooks:** PostToolUse runs format+typecheck on each edited file (seconds-scale feedback); Stop hook blocks session exit if STATE/LOG weren't updated or checks are red.
 
@@ -92,7 +92,7 @@ Outbound: Owner messages at mode transitions, PR opened/merged, gate failures, p
 ## This repo
 
 ```
-mstack/
+mfactory/
 ├── PRODUCT.md  DECISIONS.md  ARCHITECTURE.md  FEATURES.md  LOG.md
 ├── verbs/          # one playbook per verb (F-004+)
 ├── enforcement/    # hook configs, CI templates, tripwire library (F-003)
