@@ -15,6 +15,7 @@ jobs:
       - name: Shell syntax
         run: |
           bash -n bin/mfactory-new \
+                  bin/mfactory-loop \
                   enforcement/hooks/pre-commit \
                   enforcement/hooks/commit-msg \
                   enforcement/hooks/run-tripwires.sh \
