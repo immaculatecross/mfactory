@@ -17,3 +17,13 @@ Next: F-002 scaffolder and F-003 enforcement pack — the deterministic foundati
 ## 2026-07-10 — Repo live: immaculatecross/mfactory
 
 Mattia created the GitHub repo (default branch `master`) and pushed the founding commit. Project renamed mstack → mfactory across all docs (D-015). Open question: GitHub identity model — `gh` on the Mac is authenticated as matmauro01 while the repo lives under immaculatecross; autonomous repo creation (F-002) and PR gating (F-005) need the factory account authenticated wherever the loop runs.
+
+---
+
+## 2026-07-10 — F-003 built, F-002 building: enforcement pack + scaffolder
+
+`enforcement/` now holds the deterministic layer: a self-contained hooks bundle (pre-commit: 500-line cap, conflict markers, tripwires with per-line `mfactory-allow:` waivers; commit-msg: Conventional Commits) and CI gate templates (lint/typecheck/test with mandatory scripts, gitleaks, coverage ratchet, PR size cap, tests-accompany-src, docs gate). `bin/mfactory-new` scaffolds a product repo with artifacts, armed hooks, gates workflow, waiver labels, and branch protection; `--local` skips GitHub.
+
+Verified end to end in `--local` mode: console.log, oversize file, bad commit message, fake API key, and private key all blocked with remediation messages; waivered lines and clean conventional commits pass. Testing caught one real bug — the private-key regex starts with `-` and grep parsed it as an option, failing silently behind `|| true`; fixed with `grep -e`, regression-tested. Lesson recorded: a gate that can fail silently is worse than no gate.
+
+Hooks are now armed on mfactory itself (`core.hooksPath`), and `.github/workflows/ci.yml` re-runs syntax checks, tripwires, and the scaffold smoke test on every push. F-002 stays `building`: the GitHub-side path (repo creation, protection) is untestable until D-016 (factory account) is decided. This entry lands as a direct push to master — pre-enforcement, deliberate, and impossible once protection is armed.

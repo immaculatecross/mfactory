@@ -1,0 +1,9 @@
+{
+  "name": "__PRODUCT__",
+  "private": true,
+  "scripts": {
+    "lint": "echo 'BLOCKED: toolchain not configured (F-000). Replace lint/typecheck/test with real commands.' && exit 1",
+    "typecheck": "echo 'BLOCKED: toolchain not configured (F-000). Replace lint/typecheck/test with real commands.' && exit 1",
+    "test": "echo 'BLOCKED: toolchain not configured (F-000). Replace lint/typecheck/test with real commands.' && exit 1"
+  }
+}

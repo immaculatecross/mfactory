@@ -1,0 +1,49 @@
+# mfactory's own CI: the enforcement pack is tested on every push.
+name: ci
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  self-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shell syntax
+        run: |
+          bash -n bin/mfactory-new \
+                  enforcement/hooks/pre-commit \
+                  enforcement/hooks/commit-msg \
+                  enforcement/hooks/run-tripwires.sh \
+                  enforcement/ci/pr-rules.sh
+
+      - name: Tripwires on this repo
+        run: enforcement/hooks/run-tripwires.sh --all
+
+      - name: Scaffold smoke test — bad commit blocked, clean commit passes
+        run: |
+          git config --global user.email ci@mfactory
+          git config --global user.name mfactory-ci
+          cd "$(mktemp -d)"
+          "$GITHUB_WORKSPACE/bin/mfactory-new" demo --local
+          cd demo
+          printf 'console.log("leak")\n' > src.js
+          git add src.js
+          if git commit -m "feat: must be blocked" 2>err.txt; then
+            echo "FAIL: a console.log commit passed the pre-commit hook."
+            exit 1
+          fi
+          grep -q 'console-log' err.txt
+          git reset -q src.js && rm src.js err.txt
+          printf 'notes\n' > notes.txt
+          git add notes.txt
+          if ! git commit -m "bad message format" 2>err.txt; then
+            grep -q 'Conventional Commits' err.txt
+          else
+            echo "FAIL: a non-conventional message passed the commit-msg hook."
+            exit 1
+          fi
+          git commit -m "docs: clean conventional commit passes"
+          echo "smoke test ok."

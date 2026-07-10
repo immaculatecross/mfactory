@@ -1,0 +1,97 @@
+#!/bin/bash
+# mfactory-new — scaffold a product repo with mfactory's artifacts and gates (F-002).
+#
+#   mfactory-new <name> [--local] [--public]
+#
+#   --local   skip GitHub entirely (no repo creation, no push, no protection)
+#   --public  create the GitHub repo public (default: private; note that on the
+#             GitHub free plan, branch protection works on public repos only)
+#
+# The GitHub owner comes from $MFACTORY_OWNER or ~/.mfactory/owner (one line).
+set -euo pipefail
+
+die() { printf 'BLOCKED: %s\n' "$1" >&2; shift; for l in "$@"; do printf '  %s\n' "$l" >&2; done; exit 1; }
+
+NAME="${1:-}"; [ $# -gt 0 ] && shift
+[ -n "$NAME" ] || die "product name required." "Fix: mfactory-new <name> [--local] [--public]"
+case "$NAME" in
+  *[!a-z0-9-]*|-*|*-) die "name must be lowercase letters, digits, inner hyphens." "Fix: e.g. lingua-app" ;;
+esac
+
+LOCAL=0; VISIBILITY="--private"
+for a in "$@"; do
+  case "$a" in
+    --local)  LOCAL=1 ;;
+    --public) VISIBILITY="--public" ;;
+    *) die "unknown flag: $a" "Fix: only --local and --public exist." ;;
+  esac
+done
+
+MFROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TARGET="$PWD/$NAME"
+[ -e "$TARGET" ] && die "$TARGET already exists." "Fix: pick another name or remove the directory."
+
+TODAY="$(date +%F)"
+sub() { sed -e "s/__PRODUCT__/$NAME/g" -e "s/__DATE__/$TODAY/g" "$1" > "$2"; }
+
+mkdir -p "$TARGET/.mfactory/work-orders" "$TARGET/.mfactory/ci" "$TARGET/CONTRACTS" "$TARGET/.github/workflows"
+
+for n in PRODUCT DECISIONS FEATURES STATE LOG CONTROL; do
+  sub "$MFROOT/templates/product/$n.md" "$TARGET/$n.md"
+done
+sub "$MFROOT/templates/product/CONTRACTS-README.md" "$TARGET/CONTRACTS/README.md"
+sub "$MFROOT/templates/product/package.json" "$TARGET/package.json"
+sub "$MFROOT/templates/product/gitignore" "$TARGET/.gitignore"
+
+cp -R "$MFROOT/enforcement/hooks" "$TARGET/.mfactory/hooks"
+cp "$MFROOT/enforcement/ci/pr-rules.sh" "$MFROOT/enforcement/ci/coverage-ratchet.mjs" "$TARGET/.mfactory/ci/"
+cp "$MFROOT/enforcement/ci/product-gates.yml" "$TARGET/.github/workflows/gates.yml"
+touch "$TARGET/.mfactory/work-orders/.gitkeep"
+
+cd "$TARGET"
+git init -q -b master
+git config core.hooksPath .mfactory/hooks
+git add -A
+git commit -q -m "chore: scaffold $NAME with mfactory artifacts and gates"
+echo "scaffolded $TARGET — hooks armed via core.hooksPath."
+
+if [ "$LOCAL" -eq 1 ]; then
+  echo "local mode: GitHub skipped. Next: Define phase, then make F-000 (toolchain) real."
+  exit 0
+fi
+
+command -v gh >/dev/null 2>&1 || die "gh CLI not found." "Fix: brew install gh, then gh auth login"
+OWNER="${MFACTORY_OWNER:-}"
+[ -z "$OWNER" ] && [ -f "$HOME/.mfactory/owner" ] && OWNER="$(cat "$HOME/.mfactory/owner")"
+[ -n "$OWNER" ] || die "no factory account configured (D-016 undecided)." \
+  "Fix: echo <github-account> > ~/.mfactory/owner   (or export MFACTORY_OWNER)." \
+  "It must be the account gh is authenticated as."
+AUTH="$(gh api user -q .login 2>/dev/null || true)"
+[ "$AUTH" = "$OWNER" ] || die "gh is authenticated as '${AUTH:-nobody}', not '$OWNER'." \
+  "Fix: gh auth login as $OWNER (gh ≥2.40 supports gh auth switch)."
+
+gh repo create "$OWNER/$NAME" "$VISIBILITY" --source . --push
+gh label create docs-none    -R "$OWNER/$NAME" -c FBCA04 \
+  -d "PR intentionally ships no doc updates (reason in PR body)" || true
+gh label create tests-waived -R "$OWNER/$NAME" -c FBCA04 \
+  -d "Change is genuinely untestable (reason in PR body)" || true
+
+# Gates required on master, admins included. Fails on free-plan private repos.
+if gh api -X PUT "repos/$OWNER/$NAME/branches/master/protection" --input - >/dev/null 2>&1 <<'JSON'
+{
+  "required_status_checks": { "strict": true, "contexts": ["tripwires", "secrets", "code", "pr-rules"] },
+  "enforce_admins": true,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+JSON
+then
+  echo "branch protection armed on master (gates required, admins included)."
+else
+  echo "WARNING: branch protection failed — on the GitHub free plan it needs a public repo."
+  echo "  Fix: rerun with --public, upgrade the plan, or arm it later in repo settings."
+fi
+
+echo "done: https://github.com/$OWNER/$NAME"

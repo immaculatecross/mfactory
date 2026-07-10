@@ -1,0 +1,63 @@
+# mfactory gates — the authoritative merge checks for a product repo.
+# Branch protection must require: tripwires, secrets, code, pr-rules.
+# Non-Node products: replace the `code` job with equivalent lint/typecheck/test steps.
+name: gates
+on:
+  pull_request:
+  push:
+    branches: [master]
+permissions:
+  contents: read
+jobs:
+  tripwires:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: .mfactory/hooks/run-tripwires.sh --all
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  code:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Gate scripts must exist (lint, typecheck, test)
+        run: |
+          for s in lint typecheck test; do
+            if ! node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts['$s'] ? 0 : 1)" 2>/dev/null; then
+              echo "BLOCKED: package.json must define a \"$s\" script — the gates call it."
+              echo "  Fix: add it to scripts. Non-Node products: replace this job (see header)."
+              exit 1
+            fi
+          done
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - name: Coverage ratchet (never decreases)
+        run: node .mfactory/ci/coverage-ratchet.mjs
+
+  pr-rules:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      BASE_REF: ${{ github.base_ref }}
+      LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: .mfactory/ci/pr-rules.sh size
+      - run: .mfactory/ci/pr-rules.sh tests
+      - run: .mfactory/ci/pr-rules.sh docs
