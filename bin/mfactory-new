@@ -81,7 +81,8 @@ gh label create tests-waived -R "$OWNER/$NAME" -c FBCA04 \
   -d "Change is genuinely untestable (reason in PR body)" || true
 
 # Gates required on master, admins included. Fails on free-plan private repos.
-if gh api -X PUT "repos/$OWNER/$NAME/branches/master/protection" --input - >/dev/null 2>&1 <<'JSON'
+PROT_ERR="$(mktemp)"
+if gh api -X PUT "repos/$OWNER/$NAME/branches/master/protection" --input - >/dev/null 2>"$PROT_ERR" <<'JSON'
 {
   "required_status_checks": { "strict": true, "contexts": ["tripwires", "secrets", "code", "pr-rules", "review"] },
   "enforce_admins": true,
@@ -94,8 +95,11 @@ JSON
 then
   echo "branch protection armed on master (gates required, admins included)."
 else
-  echo "WARNING: branch protection failed — on the GitHub free plan it needs a public repo."
-  echo "  Fix: rerun with --public, upgrade the plan, or arm it later in repo settings."
+  echo "WARNING: branch protection was NOT armed. GitHub said:"
+  sed 's/^/  /' "$PROT_ERR" | head -3
+  echo "  Note: free-plan private repos don't support protection — rerun with --public,"
+  echo "  upgrade the plan, or arm it later in repo settings."
 fi
+rm -f "$PROT_ERR"
 
 echo "done: https://github.com/$OWNER/$NAME"

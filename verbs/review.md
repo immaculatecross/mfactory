@@ -6,6 +6,7 @@ You are a fresh session and you did not build this change. Your job is to find w
 
 ## Boot
 
+0. Pin the head SHA before anything else: `gh pr view <n> --json headRefOid -q .headRefOid`. Everything you review, and the status you post, refer to this SHA and no other.
 1. Read the work order (`.mfactory/work-orders/WO-<id>.md`) or, failing that, the PR description.
 2. Read `PRODUCT.md` §principles, `CONTRACTS/` (products) or `ARCHITECTURE.md` (mfactory itself).
 3. Read the full diff: `gh pr diff <n>`. Then read every touched file in full, not just hunks.
@@ -38,5 +39,7 @@ Each finding: `BLOCKING` (correctness bug, contract violation, unreal test, weak
      -f state=success|failure -f context=review \
      -f description="approve — N advisory" 
    ```
+
+Before posting a `success` status, re-fetch `headRefOid` and compare it to the SHA you pinned at boot. If the branch moved mid-review, post nothing — report that the branch moved and stop; the Foreman dispatches a fresh review.
 
 If new commits land after your review, your status dies with the old SHA — by design. Re-review is a fresh dispatch, not a rubber stamp of the delta.

@@ -15,6 +15,10 @@ Read, in order: the work order, `AGENTS.md`, `STATE.md`, `CONTRACTS/`, then only
 5. Run the gate commands (`npm run lint`, `npm run typecheck`, `npm run test`) before pushing. The hooks and CI are authoritative; if a gate blocks you, fix the cause — a waiver (`mfactory-allow:<id>`) is a last resort and must carry its reason on the same line.
 6. If a remote exists: push and open a PR titled like your conventional commit, body = summary + how it was verified + risks. If no remote: leave the branch and stop.
 
+## Never touch the review
+
+You never post review verdicts and never set the `review` commit status — that identity belongs to the reviewer session alone. A builder setting its own review status is the gravest violation in the system; there is no circumstance that justifies it.
+
 ## Size discipline
 
 The PR cap is 400 changed lines (lockfiles excluded). If the feature cannot fit honestly, do not trim tests or docs to squeeze under — stop and report `split` with a proposed division. Splitting is a good outcome, not a failure.
