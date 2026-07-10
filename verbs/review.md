@@ -25,7 +25,13 @@ Each finding: `BLOCKING` (correctness bug, contract violation, unreal test, weak
 
 ## Actions (both, always)
 
-1. **Post the verdict as a PR comment** — verdict line, then findings with file:line, then one sentence on what you tried hardest to break:
+1. **Post the verdict as a PR comment.** The first line must be exactly (full 40-hex head SHA from `gh pr view <n> --json headRefOid`):
+
+   ```
+   VERDICT: approve SHA=<head-sha>
+   ```
+
+   (or `request-changes`). No other text on that line — `enforcement/ci/review-audit.sh` validates it before merge and rejects anything else. Then findings with file:line, then one sentence on what you tried hardest to break:
 
    ```
    gh pr comment <n> --body "..."
