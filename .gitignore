@@ -6,3 +6,8 @@ node_modules/
 *.log
 .env
 .env.*
+
+# Loop-driver runtime state — never history (bin/mfactory-loop)
+.mfactory/loop/
+.mfactory/loop.lock/
+.mfactory/STOP

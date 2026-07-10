@@ -5,3 +5,8 @@ coverage/
 .env.*
 *.log
 .DS_Store
+
+# Loop-driver runtime state — never history (bin/mfactory-loop)
+.mfactory/loop/
+.mfactory/loop.lock/
+.mfactory/STOP
