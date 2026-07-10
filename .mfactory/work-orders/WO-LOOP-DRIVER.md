@@ -6,7 +6,7 @@ Nothing currently re-invokes the Foreman, so "autonomous build" still needs a hu
 1. `bin/mfactory-loop [--dir <repo>] [--max-cycles N]` atomically permits one driver per repo, dispatches one fresh Foreman per cycle, and preserves each cycle's full stdout/stderr in a unique log. Active and stale locks fail with their own fix; normal and signaled exits release ownership.
 2. Only the report's final line is protocol; earlier lines are ordinary output. Final `NEXT: continue` re-dispatches; final `NEXT: stop <reason>` exits 0 only with a non-whitespace reason. Any other final line, agent crash, or cycle cap fails closed with its own fix.
 3. `.mfactory/STOP` halts before dispatch with exit 2 and names the target-qualified removal command. Steering stays in CONTROL.md.
-4. `$MFACTORY_AGENT_CMD` is a quoting-safe executable/wrapper path (harness-agnostic, D-009), including paths with spaces; tests drive the real driver with fake agents.
+4. `$MFACTORY_AGENT_CMD` is a quoting-safe executable path (harness-agnostic, D-009), including paths with spaces. A launcher script must `exec` its agent so the owned PID remains the agent; tests drive the real executable with fakes.
 5. `verbs/build.md` ends the cycle with the sentinel instead of looping internally (the internal loop contradicted D-003); driver runtime state is gitignored in mfactory and in scaffolded products.
 6. `LOG.md` records the change; `STATE.md` is regenerated (session end).
 ## Contracts that apply

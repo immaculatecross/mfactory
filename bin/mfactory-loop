@@ -13,8 +13,8 @@
 # Emergency brake (D-014): `touch .mfactory/STOP` halts before the next cycle;
 # remove the file to resume. Ordinary steering goes in CONTROL.md as usual.
 #
-# Harness (D-009): $MFACTORY_AGENT_CMD is an executable or wrapper path, invoked
-# with the boot prompt as its single argument. The default is claude -p.
+# Harness (D-009): $MFACTORY_AGENT_CMD is an executable path, invoked with the
+# boot prompt as one argument. Launcher scripts must exec the agent they start.
 #
 # Exit: 0 clean stop · 1 failure (agent crash, no sentinel, cycle cap) · 2 brake
 set -uo pipefail
