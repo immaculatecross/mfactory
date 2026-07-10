@@ -32,6 +32,8 @@ mk_repo() { # a minimal fake product; prints its path
 mk_agent() { # $1 = repo, $2 = body of the fake agent (sees $n = call number)
   cat > "$1/agent" <<EOF
 #!/bin/bash
+[ "\$#" -eq 1 ] || exit 90
+case "\$1" in *"execute "*"build.md"*"NEXT: continue"*"NEXT: stop <reason>"*) ;; *) exit 91 ;; esac
 d="\$(dirname "\$0")"
 n=\$(( \$(cat "\$d/calls" 2>/dev/null || echo 0) + 1 ))
 echo "\$n" > "\$d/calls"
@@ -92,21 +94,24 @@ case "$ONE_STATUS:$TWO_STATUS" in
 esac
 check "simultaneous drivers produce one success and one block" pass "$RESULT"
 check "  … only one Foreman was dispatched" 1 "$(dispatches "$R")"
-contains "  … active-lock failure states its fix" "$LOCK_ERR" "Fix:"
+contains "  … active-lock failure states its fix" "$LOCK_ERR" "verify loop ownership"
 [ ! -e "$R/.mfactory/loop.lock" ]
 check "  … clean exit releases the lock" 0 $?
 # A termination signal reaches the agent and releases repository ownership.
 R=$(mk_repo); mk_agent "$R" '
 trap "" TERM
+echo "$$" > "$d/agent-pid"
 touch "$d/started"
+kill -TERM "$PPID"
 while :; do sleep 1; done'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err" &
 LOOP_PID=$!
 N=0
 while [ ! -e "$R/started" ] && [ "$N" -lt 100 ]; do sleep 0.05; N=$((N + 1)); done
-kill -TERM "$LOOP_PID"
 wait "$LOOP_PID"; check "TERM stops the active driver" 143 $?
 [ ! -e "$R/.mfactory/loop.lock" ]; check "  … TERM releases the lock" 0 $?
+kill -0 "$(cat "$R/agent-pid")" 2>/dev/null
+check "  … TERM leaves no agent behind" 1 $?
 # A stale lock fails closed and explains the manual recovery.
 R=$(mk_repo); mk_agent "$R" 'echo "NEXT: stop must not run"'
 mkdir "$R/.mfactory/loop.lock"
@@ -115,39 +120,41 @@ MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
 check "stale lock blocks dispatch" 1 $?
 check "  … stale lock dispatches no Foreman" 0 "$(dispatches "$R")"
 contains "  … stale-lock failure names the state" "$R/err" "stale mfactory loop lock"
-contains "  … stale-lock failure states its fix" "$R/err" "Fix:"
+contains "  … stale-lock failure states its fix" "$R/err" "verify loop ownership"
 # The emergency brake halts before any dispatch.
 R=$(mk_repo); mk_agent "$R" 'echo "NEXT: continue"'
 touch "$R/.mfactory/STOP"
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
 check "STOP brake halts before dispatch" 2 $?
 check "  … zero agents dispatched" 0 "$(calls "$R")"
-contains "  … STOP failure states its fix" "$R/err" "Fix:"
 contains "  … STOP fix names the target repo" "$R/err" "rm -- $R/.mfactory/STOP"
+R=$(mk_repo); mk_agent "$R" 'touch "$d/.mfactory/STOP"; echo "NEXT: continue"'
+MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
+check "brake created between cycles stops before redispatch" 2 $?
+check "  … between-cycle brake permits one dispatch" 1 "$(dispatches "$R")"
 # A report with no sentinel stops the loop fail-safe.
 R=$(mk_repo); mk_agent "$R" 'echo "report without any sentinel"'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
 check "missing sentinel fails safe" 1 $?
 check "  … stopped after the first cycle" 1 "$(calls "$R")"
-contains "  … missing-sentinel failure states its fix" "$R/err" "Fix:"
+contains "  … missing-sentinel failure states its fix" "$R/err" "remove output after the one final"
 # A sentinel-lookalike must not count.
 R=$(mk_repo); mk_agent "$R" 'echo "NEXT: stopgap plan follows"'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
 check "sentinel lookalike (stopgap) fails safe" 1 $?
-contains "  … lookalike failure states its fix" "$R/err" "Fix:"
+contains "  … lookalike failure states its fix" "$R/err" "remove output after the one final"
 # The protocol is exactly one sentinel, on the final line, with a stop reason.
 R=$(mk_repo); mk_agent "$R" 'echo "NEXT: stop done"; echo "trailing output"'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
 check "output after a sentinel fails safe" 1 $?
-contains "  … trailing-output failure states its fix" "$R/err" "Fix:"
-R=$(mk_repo); mk_agent "$R" 'echo "NEXT: continue"; echo "NEXT: stop conflict"'
+contains "  … trailing-output failure states its fix" "$R/err" "remove output after the one final"
+R=$(mk_repo); mk_agent "$R" 'echo "NEXT: stop"; echo "NEXT: stop final line wins"'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
-check "conflicting sentinels fail safe" 1 $?
-contains "  … conflicting-sentinel failure states its fix" "$R/err" "Fix:"
+check "only the valid final line is protocol" 0 $?
 R=$(mk_repo); mk_agent "$R" 'echo "NEXT: stop"'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
 check "bare stop without a reason fails safe" 1 $?
-contains "  … bare-stop failure states its fix" "$R/err" "Fix:"
+contains "  … bare-stop failure states its fix" "$R/err" "remove output after the one final"
 R=$(mk_repo); mk_agent "$R" 'printf "NEXT: stop valid reason\nNEXT: stop   \n"'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
 check "valid then whitespace-only final stop fails safe" 1 $?
@@ -155,13 +162,9 @@ R=$(mk_repo); mk_agent "$R" 'printf "NEXT: stop \t\t\n"'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
 check "tab-only stop reason fails safe" 1 $?
 # The harness contract accepts an executable path containing spaces.
-R=$(mk_repo)
+R=$(mk_repo); mk_agent "$R" 'echo "NEXT: stop spaced path works"'
 mkdir "$R/harness with spaces"
-cat > "$R/harness with spaces/agent" <<'EOF'
-#!/bin/bash
-echo "NEXT: stop spaced path works"
-EOF
-chmod +x "$R/harness with spaces/agent"
+mv "$R/agent" "$R/harness with spaces/agent"
 MFACTORY_AGENT_CMD="$R/harness with spaces/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
 check "spaced harness executable path works" 0 $?
 # The cycle cap is a leash: perpetual continue stops at the cap.
@@ -169,12 +172,12 @@ R=$(mk_repo); mk_agent "$R" 'echo "NEXT: continue"'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" --max-cycles 2 >/dev/null 2>"$R/err"
 check "cycle cap stops a runaway loop" 1 $?
 check "  … dispatched exactly the cap" 2 "$(calls "$R")"
-contains "  … cycle-cap failure states its fix" "$R/err" "Fix:"
+contains "  … cycle-cap failure states its fix" "$R/err" "rerun to continue"
 # An agent crash stops the loop with the log preserved.
 R=$(mk_repo); mk_agent "$R" 'echo "boom on stdout"; echo "boom on stderr" >&2; exit 9'
 MFACTORY_AGENT_CMD="$R/agent" "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
 check "agent crash stops the loop" 1 $?
-contains "  … crash failure states its fix" "$R/err" "Fix:"
+contains "  … crash failure states its fix" "$R/err" "artifacts are untouched"
 for f in "$R"/.mfactory/loop/*; do CRASH_LOG="$f"; break; done
 contains "  … crash log preserves stdout" "$CRASH_LOG" "boom on stdout"
 contains "  … crash log preserves stderr" "$CRASH_LOG" "boom on stderr"
@@ -182,13 +185,13 @@ contains "  … crash log preserves stderr" "$CRASH_LOG" "boom on stderr"
 R=$(mktemp -d)
 "$LOOP" --dir "$R" >/dev/null 2>"$R/err"
 check "missing build verb is refused" 1 $?
-contains "  … missing-verb failure states its fix" "$R/err" "Fix:"
+contains "  … missing-verb failure states its fix" "$R/err" "run inside a scaffolded product"
 # Missing option values must fail through die(), not Bash parameter expansion.
 R=$(mktemp -d)
 "$LOOP" --dir >/dev/null 2>"$R/dir-err"
 check "missing --dir value is refused" 1 $?
-contains "  … missing --dir value states its fix" "$R/dir-err" "Fix:"
+contains "  … missing --dir value states its fix" "$R/dir-err" "pass --dir <repo>"
 "$LOOP" --max-cycles >/dev/null 2>"$R/max-err"
 check "missing --max-cycles value is refused" 1 $?
-contains "  … missing --max-cycles value states its fix" "$R/max-err" "Fix:"
+contains "  … missing --max-cycles value states its fix" "$R/max-err" "pass --max-cycles <positive integer>"
 exit $FAIL

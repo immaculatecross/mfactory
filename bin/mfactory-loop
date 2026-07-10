@@ -5,7 +5,7 @@
 #
 # One atomic repo-local lock prevents concurrent Foremen. Each cycle checks the
 # emergency brake, dispatches one fresh Foreman session on the build verb, logs
-# its full output to .mfactory/loop/, and reads the report's final sentinel:
+# its full output to .mfactory/loop/. Only the report's final line is protocol:
 #   NEXT: continue        ready work remains — dispatch a fresh Foreman
 #   NEXT: stop <reason>   no ready work, CONTROL said stop, or blocked
 # A missing sentinel stops the loop (fail safe).
@@ -19,7 +19,14 @@
 # Exit: 0 clean stop · 1 failure (agent crash, no sentinel, cycle cap) · 2 brake
 set -uo pipefail
 
-die() { printf 'BLOCKED: %s\n' "$1" >&2; shift; for l in "$@"; do printf '  %s\n' "$l" >&2; done; exit 1; }
+die() {
+  case "${2:-}" in "Fix: "*[![:space:]]*) ;; *)
+    printf 'BLOCKED: %s\n  Fix: every die call must supply actionable remediation.\n' "$1" >&2; exit 1 ;;
+  esac
+  printf 'BLOCKED: %s\n' "$1" >&2; shift
+  for l in "$@"; do printf '  %s\n' "$l" >&2; done
+  exit 1
+}
 
 DIR="$PWD"; MAX=8
 while [ $# -gt 0 ]; do
@@ -53,16 +60,19 @@ if ! mkdir "$LOCK" 2>/dev/null; then
   [ ! -r "$LOCK/pid" ] || IFS= read -r OWNER < "$LOCK/pid"
   if printf '%s' "$OWNER" | grep -qE '^[1-9][0-9]*$' && kill -0 "$OWNER" 2>/dev/null; then
     die "another mfactory loop is running for $DIR (PID $OWNER)." \
-        "Fix: verify PID $OWNER owns this repo's loop; wait or stop it only if verified."
+        "Fix: verify loop ownership; wait or stop PID $OWNER only if it owns this repo."
   fi
   die "a stale mfactory loop lock exists at $LOCK (recorded PID: $OWNER)." \
-      "Fix: confirm no loop owns the repo, remove that lock directory, then rerun."
+      "Fix: verify loop ownership; if none exists, remove that lock directory and rerun."
 fi
 cleanup_lock() { rm -f "$LOCK/pid"; rmdir "$LOCK" 2>/dev/null || true; }
-AGENT_PID=
+AGENT_PID=; LAUNCHING=0; PENDING_SIGNAL=
 on_signal() {
-  trap - HUP INT TERM
   CODE="$1"
+  if [ "$LAUNCHING" -eq 1 ] && [ -z "$AGENT_PID" ]; then
+    PENDING_SIGNAL="$CODE"; return
+  fi
+  trap - HUP INT TERM
   if [ -n "$AGENT_PID" ]; then
     kill -TERM "$AGENT_PID" 2>/dev/null || true
     ( sleep 1; kill -KILL "$AGENT_PID" 2>/dev/null || true ) & WATCHDOG_PID=$!
@@ -96,25 +106,19 @@ while [ "$CYCLE" -le "$MAX" ]; do
     || die "cycle $CYCLE: could not create a unique log." \
            "Fix: check that $DIR/$LOGDIR exists and is writable, then rerun."
   echo "loop: cycle $CYCLE/$MAX — dispatching a fresh Foreman (log: $LOG)"
+  LAUNCHING=1
   if [ -n "${MFACTORY_AGENT_CMD:-}" ]; then
     "$MFACTORY_AGENT_CMD" "$PROMPT" >"$LOG" 2>&1 &
   else
     claude -p --permission-mode acceptEdits "$PROMPT" >"$LOG" 2>&1 &
   fi
-  AGENT_PID=$!
+  AGENT_PID=$!; LAUNCHING=0
+  if [ -n "$PENDING_SIGNAL" ]; then CODE="$PENDING_SIGNAL"; PENDING_SIGNAL=; on_signal "$CODE"; fi
   if wait "$AGENT_PID"; then AGENT_PID=; else
     STATUS=$?; AGENT_PID=
     die "cycle $CYCLE: the agent exited non-zero (status $STATUS)." \
         "Fix: read $LOG; the artifacts are untouched by the driver — rerun when resolved."
   fi
-  SENTINELS=$(awk '{
-    sub(/\r$/, "")
-    if ($0 == "NEXT: continue" || $0 ~ /^NEXT: stop [[:space:]]*[^[:space:]].*$/) n++
-  } END { print n + 0 }' "$LOG")
-  [ "$SENTINELS" -eq 1 ] \
-    || die "cycle $CYCLE: expected exactly one valid sentinel, found $SENTINELS." \
-           "Fix: the Foreman must emit one final line: 'NEXT: continue' or" \
-           "'NEXT: stop <reason>'; remove earlier, duplicate, or bare sentinels."
   SENTINEL=$(tail -n 1 "$LOG" | tr -d '\r')
   case "$SENTINEL" in
     "NEXT: continue")
