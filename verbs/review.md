@@ -21,7 +21,21 @@ You are a fresh session and you did not build this change. Your job is to find w
 
 ## Findings and verdict
 
-Each finding: `BLOCKING` (correctness bug, contract violation, unreal test, weakened gate, secret, untruthful docs) or `ADVISORY` (simplification, naming, minor gaps). Any BLOCKING finding forces `request-changes`; zero BLOCKING findings force `approve` — advisories never block, and you never approve "with fingers crossed."
+Each finding is `BLOCKING` or `ADVISORY`. Any BLOCKING finding forces `request-changes`; zero BLOCKING findings force `approve` — advisories never block, and you never approve "with fingers crossed."
+
+**The materiality bar (D-018).** A finding is BLOCKING only when you demonstrate the harm — name the input or sequence, the observed outcome, and which of these classes it falls in:
+
+- **fail-open** — the system proceeds when it must not: duplicate or runaway dispatch, gate bypass, merge on red, lost singleton ownership.
+- **silent wrong result** — wrong behavior delivered as success to a user, caller, or downstream agent.
+- **happy path broken** — valid, contract-conforming input is rejected or mangled.
+- **unreal test** — a committed test that cannot fail when the code it guards is wrong.
+- **data loss or secret exposure.**
+- **untruthful artifacts** — LOG/FEATURES/STATE/docs claiming what is not true.
+- **contract violation** — a contract, gate, or decision changed or routed around without a decision entry.
+
+Every BLOCKING finding carries a `Harm:` line naming its class and the demonstrated consequence (e.g. `Harm: fail-open — two Foremen dispatched concurrently`). If the honest Harm line would read "the system stops safely with a truthful message," the finding is ADVISORY — regardless of how the acceptance criteria read. Fail-closed is not a bug class; spec-letter deviations with safe outcomes are advisories addressed to the work-order author, not repair work.
+
+**The ratchet rule (D-018).** On re-review after a repair, a new BLOCKING finding must be either (a) introduced or exposed by the repair commits, or (b) a harm-class finding under the bar above — a genuinely unsafe bug is always BLOCKING even if the previous review missed it, and you must say it was missed. Anything else that already existed in previously reviewed code is ADVISORY on re-review. Goalposts do not move.
 
 ## Actions (both, always)
 
@@ -46,3 +60,14 @@ Each finding: `BLOCKING` (correctness bug, contract violation, unreal test, weak
    ```
 
 If new commits land after your review, your status dies with the old SHA — by design. Re-review is a fresh dispatch, not a rubber stamp of the delta.
+
+## Adjudication (last resort — Foreman-dispatched only)
+
+When a PR has already used its one repair and the re-review still requests changes, the Foreman may dispatch a fresh session on this section instead of blocking the feature. You are not a third reviewer: you do not dig for new findings; you judge the standing BLOCKING findings against the materiality bar (D-018). The one exception: if you can demonstrate a harm-class bug everyone missed, report it as sustained.
+
+1. Read the standing `request-changes` verdict, the work order, the full diff, and every file a finding touches.
+2. Rule on each BLOCKING finding: **sustain** (it meets the bar — restate its `Harm:` line) or **overrule** (it fails the bar — name what's missing: no demonstrated harm, a safe-stop outcome, or outside the ratchet rule's re-review scope).
+3. **Any sustained** → post a comment listing the rulings (no verdict line, no status). The Foreman scopes the final repair to the sustained findings only.
+4. **All overruled** → the override must ride in history: append the override record to `LOG.md` on the PR branch — which findings were overruled and why, in one entry — as a commit touching `LOG.md` only. That new head voids the stale verdict; post `VERDICT: approve SHA=<new head>` with the per-finding rulings and set the `review` status on it. An override that isn't in `LOG.md` didn't happen.
+
+Adjudication never overrules a sustained harm-class finding, and nothing here weakens the audit: one verdict per head, first line, exact SHA.
