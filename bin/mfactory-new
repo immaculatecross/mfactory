@@ -42,7 +42,11 @@ done
 sub "$MFROOT/templates/product/CONTRACTS-README.md" "$TARGET/CONTRACTS/README.md"
 sub "$MFROOT/templates/product/package.json" "$TARGET/package.json"
 sub "$MFROOT/templates/product/gitignore" "$TARGET/.gitignore"
+sub "$MFROOT/templates/product/AGENTS.md" "$TARGET/AGENTS.md"
+cp "$TARGET/AGENTS.md" "$TARGET/CLAUDE.md"
 
+cp -R "$MFROOT/verbs" "$TARGET/.mfactory/verbs"
+cp "$MFROOT/templates/work-order.md" "$TARGET/.mfactory/work-order-template.md"
 cp -R "$MFROOT/enforcement/hooks" "$TARGET/.mfactory/hooks"
 cp "$MFROOT/enforcement/ci/pr-rules.sh" "$MFROOT/enforcement/ci/coverage-ratchet.mjs" "$TARGET/.mfactory/ci/"
 cp "$MFROOT/enforcement/ci/product-gates.yml" "$TARGET/.github/workflows/gates.yml"
