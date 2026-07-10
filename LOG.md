@@ -56,8 +56,14 @@ F-005: `verbs/review.md` is the adversarial reviewer — fresh session, world li
 
 ---
 
-## 2026-07-10 — First adversarial verdict: approve, 0 blocking, 4 advisory — all four fixed
+## 2026-07-10 — First adversarial verdict: approve, 0 blocking, 4 advisory
 
-The reviewer's first live run (PR #3) approved and produced four advisories, each real, fixed here per D-017: (1) mid-review push could earn a success status on an unreviewed SHA → `verbs/review.md` now pins the head SHA at boot and re-checks it before posting success; (2) nothing forbade a builder from setting the `review` status itself → `verbs/builder.md` gains the "Never touch the review" section; (3) STATE.md still named only `self-check` as required → corrected; (4) the scaffolder's protection-failure message blamed the free plan for any error → it now prints GitHub's actual error, keeping the plan hint as a note.
+The reviewer's first live run (PR #3) approved and produced four advisories, each real, addressed per D-017: (1) mid-review push could earn a success status on an unreviewed SHA → `verbs/review.md` now pins the head SHA at boot and re-checks it before posting any status; (2) nothing forbade a builder from setting the `review` status itself → `verbs/builder.md` gains "Never touch the review" **and** — after the reviewer blocked the first, prose-only attempt (see next entry) — the deterministic consistency audit `bin/mfactory-audit-review`; (3) STATE.md still named only `self-check` as required → corrected; (4) the scaffolder's protection-failure message blamed the free plan for any error → it now prints GitHub's actual error, keeping the plan hint as a note.
 
-Known gap, recorded honestly: the `review` status is prose-guarded, not deterministic — any session with the factory's token *could* set it; a real fix is a separate reviewer identity/token, deferred until the loop runs on the box. The scaffolder's protection path has one live pass (mfactory-smoke) but no CI coverage — accepted for now, since CI-testing it would create real repos.
+Known gaps, recorded honestly: the audit verifies status-vs-artifact consistency, not identity — true separation needs a distinct reviewer token, deferred until the loop runs on the box. The scaffolder's protection path has one live pass (mfactory-smoke) but no CI coverage — accepted, since CI-testing it would create real repos.
+
+---
+
+## 2026-07-10 — The reviewer blocked its own author (PR #4): request-changes, 1 blocking
+
+First BLOCKING verdict, and it was earned: the repair PR claimed "all four advisories fixed" while advisory 2 had received only the prose prohibition, not the audit mechanism it asked for — a prose-only answer to a "this gate rests on prose" finding, under a total-fix claim. The repair: `bin/mfactory-audit-review` (review status must be backed by a verdict comment citing the same SHA and verdict; wired into the Foreman's merge bar and shipped into products via the scaffolder), the LOG claim corrected to the truth, and both new advisories taken (pipe order under `set -o pipefail` in the scaffolder's warning path; the re-check now guards any status, and verdict comments must cite the pinned SHA). Encoded as: script + playbook lines, per D-017.

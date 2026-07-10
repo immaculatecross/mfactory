@@ -1,0 +1,45 @@
+#!/bin/bash
+# Deterministic consistency audit of a PR's review verdict (D-017; PR #3 advisory 2).
+# Verifies the `review` status on the head SHA is backed by a verdict comment that
+# cites the same SHA and states the same verdict. This raises the cost of spoofing
+# from one API call to forging a complete verdict artifact. It is not identity
+# separation — that needs a distinct reviewer token and is deferred (LOG 2026-07-10).
+#   usage: mfactory-audit-review <owner/repo> <pr-number>
+set -euo pipefail
+
+R="${1:?usage: mfactory-audit-review <owner/repo> <pr-number>}"
+N="${2:?usage: mfactory-audit-review <owner/repo> <pr-number>}"
+
+SHA=$(gh pr view "$N" -R "$R" --json headRefOid -q .headRefOid)
+STATE=$(gh api "repos/$R/commits/$SHA/status" \
+        -q '[.statuses[] | select(.context=="review")][0].state' 2>/dev/null || true)
+
+if [ -z "$STATE" ] || [ "$STATE" = "null" ]; then
+  echo "BLOCKED: no review status on head SHA $SHA." >&2
+  echo "  Fix: dispatch the review verb (verbs/review.md) on PR #$N." >&2
+  exit 1
+fi
+
+if [ "$STATE" = "success" ]; then VERDICT="approve"; else VERDICT="request-changes"; fi
+
+COMMENTS=$(gh pr view "$N" -R "$R" --json comments -q '.comments[].body' | tr '\n' ' ')
+
+case "$COMMENTS" in
+  *"$SHA"*) : ;;
+  *)
+    echo "BLOCKED: no PR comment cites the reviewed head SHA $SHA." >&2
+    echo "  Fix: the review status has no backing verdict artifact — re-dispatch the" >&2
+    echo "  reviewer and investigate what set the status." >&2
+    exit 1 ;;
+esac
+
+case "$COMMENTS" in
+  *"$VERDICT"*) : ;;
+  *)
+    echo "BLOCKED: review status is '$STATE' but no comment states verdict '$VERDICT'." >&2
+    echo "  Fix: status and verdict artifact disagree — re-dispatch the reviewer and" >&2
+    echo "  investigate what set the status." >&2
+    exit 1 ;;
+esac
+
+echo "review audit ok: status '$STATE' on $SHA is backed by a matching verdict comment."

@@ -48,7 +48,8 @@ cp "$TARGET/AGENTS.md" "$TARGET/CLAUDE.md"
 cp -R "$MFROOT/verbs" "$TARGET/.mfactory/verbs"
 cp "$MFROOT/templates/work-order.md" "$TARGET/.mfactory/work-order-template.md"
 cp -R "$MFROOT/enforcement/hooks" "$TARGET/.mfactory/hooks"
-cp "$MFROOT/enforcement/ci/pr-rules.sh" "$MFROOT/enforcement/ci/coverage-ratchet.mjs" "$TARGET/.mfactory/ci/"
+cp "$MFROOT/enforcement/ci/pr-rules.sh" "$MFROOT/enforcement/ci/coverage-ratchet.mjs" \
+   "$MFROOT/bin/mfactory-audit-review" "$TARGET/.mfactory/ci/"
 cp "$MFROOT/enforcement/ci/product-gates.yml" "$TARGET/.github/workflows/gates.yml"
 touch "$TARGET/.mfactory/work-orders/.gitkeep"
 
@@ -96,7 +97,7 @@ then
   echo "branch protection armed on master (gates required, admins included)."
 else
   echo "WARNING: branch protection was NOT armed. GitHub said:"
-  sed 's/^/  /' "$PROT_ERR" | head -3
+  head -3 "$PROT_ERR" | sed 's/^/  /'
   echo "  Note: free-plan private repos don't support protection — rerun with --public,"
   echo "  upgrade the plan, or arm it later in repo settings."
 fi

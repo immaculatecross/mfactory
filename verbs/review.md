@@ -26,7 +26,7 @@ Each finding: `BLOCKING` (correctness bug, contract violation, unreal test, weak
 
 ## Actions (both, always)
 
-1. **Post the verdict as a PR comment** — verdict line, then findings with file:line, then one sentence on what you tried hardest to break:
+1. **Post the verdict as a PR comment** — verdict line **naming the pinned head SHA**, then findings with file:line, then one sentence on what you tried hardest to break (the consistency audit checks that this comment cites your SHA and verdict — omit them and the merge is blocked):
 
    ```
    gh pr comment <n> --body "..."
@@ -40,6 +40,6 @@ Each finding: `BLOCKING` (correctness bug, contract violation, unreal test, weak
      -f description="approve — N advisory" 
    ```
 
-Before posting a `success` status, re-fetch `headRefOid` and compare it to the SHA you pinned at boot. If the branch moved mid-review, post nothing — report that the branch moved and stop; the Foreman dispatches a fresh review.
+Before posting **any** status, re-fetch `headRefOid` and compare it to the SHA you pinned at boot. If the branch moved mid-review, post nothing — report that the branch moved and stop; the Foreman dispatches a fresh review.
 
 If new commits land after your review, your status dies with the old SHA — by design. Re-review is a fresh dispatch, not a rubber stamp of the delta.
