@@ -39,7 +39,7 @@ None.
 ## Exit report
 
 RESULT: done
-Branch/PR: `docs/pr4-blocked` (PR URL appended after opening)
+Branch/PR: `docs/pr4-blocked` - https://github.com/immaculatecross/mfactory/pull/5
 Changed:   Recorded both failed PR #4 verdicts, the exact false-approval bug, and the blocked state in `LOG.md`.
 Changed:   Updated `STATE.md` to say PR #4 is blocked and its changes are absent from `master`.
 Changed:   Completed this work order without importing or repairing PR #4 code.
