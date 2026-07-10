@@ -67,3 +67,7 @@ Renamed from mstack. **Why:** "stack" says pile of tools (gstack's model); "fact
 ## D-016 · 2026-07-10 · Accepted — immaculatecross is the factory's machine identity; matmauro01 is the human's
 
 The factory account owns product repos, is what `gh` authenticates as wherever the loop runs, and is what every factory commit and PR is attributed to. Mattia's own account stays for human review, approvals, and admin. **Why:** accountability stays legible (factory work vs. human work at a glance) and the factory's credentials are scoped and revocable without touching Mattia's account. **Consequences:** `~/.mfactory/owner` = immaculatecross; the factory's token deliberately never gets `delete_repo` scope — destructive powers are withheld by construction, so repo deletion always requires the human.
+
+## D-017 · 2026-07-10 · Accepted — Lessons become enforcement, never prose alone
+
+Every lesson learned (a bug found, a false verdict, a gate gap) is encoded the same day as a tripwire rule, a test, or a playbook line; the LOG.md entry records where it was encoded. **Why:** prose lessons rot in a growing log; encoded lessons compound — this is the tripwire habit generalized from bugs to everything. **Consequences:** a LOG meta-lesson without an "encoded as" pointer is unfinished work. Applied retroactively to today's two lessons: the silent-grep failure is encoded as the `grep -e` fix plus the CI smoke test; the verification-is-code lesson is encoded in `verbs/build.md` (judge with committed commands, never improvised shell).
