@@ -1,6 +1,6 @@
 #!/bin/bash
-# Regression tests for review-audit.sh — the PR #4 lesson encoded (D-017).
-# Every false approval the isolated reviewer found on PR #4 is a case here.
+# Regression tests for review-audit.sh — the PR #4 lesson and the PR #6 review
+# finding encoded (D-017). Stdin contract: each line is one comment's FIRST line.
 set -uo pipefail
 
 AUDIT="$(cd "$(dirname "$0")/.." && pwd)/ci/review-audit.sh"
@@ -8,7 +8,7 @@ HEAD="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 OLD="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 FAIL=0
 
-expect() { # $1 = pass|block, $2 = case name, stdin = comment bodies
+expect() { # $1 = pass|block, $2 = case name, stdin = comment first lines
   input=$(cat)
   if printf '%s\n' "$input" | "$AUDIT" --stdin "$HEAD" >/dev/null 2>&1; then
     got=pass
@@ -24,19 +24,18 @@ expect() { # $1 = pass|block, $2 = case name, stdin = comment bodies
   fi
 }
 
-expect pass "genuine approve for head SHA" <<EOF
+expect pass "genuine approve opening a comment" <<EOF
 VERDICT: approve SHA=$HEAD
-Tried hardest to break the SHA parsing; could not.
 EOF
 
-expect pass "approve with findings below the verdict line" <<EOF
+expect pass "approve among ordinary comments" <<EOF
+Kicking off the build now.
 VERDICT: approve SHA=$HEAD
-ADVISORY foo.sh:12 — naming could be tighter.
+Merged, thanks.
 EOF
 
 expect block "request-changes for head SHA" <<EOF
 VERDICT: request-changes SHA=$HEAD
-BLOCKING bar.sh:3 — test cannot fail.
 EOF
 
 expect block "no comments at all" <<EOF
@@ -55,7 +54,7 @@ expect block "trailing text after the verdict line" <<EOF
 VERDICT: approve SHA=$HEAD (only if CI is green)
 EOF
 
-expect block "leading text before the verdict line" <<EOF
+expect block "quoted verdict is not a verdict" <<EOF
 > VERDICT: approve SHA=$HEAD
 EOF
 
@@ -81,6 +80,22 @@ expect pass "stale request-changes plus fresh approve for head" <<EOF
 VERDICT: request-changes SHA=$OLD
 VERDICT: approve SHA=$HEAD
 EOF
+
+# The PR #6 review finding: a comment narrating a verdict deeper in its body
+# must be invisible. Only first lines reach the audit, so this comment
+# contributes just its opening line.
+expect block "verdict below a comment's first line is never read" <<EOF
+Do NOT merge; if I had reviewed, the verdict would be:
+EOF
+
+# CRLF from the GitHub web UI must not block a genuine verdict.
+if printf 'VERDICT: approve SHA=%s\r\n' "$HEAD" | "$AUDIT" --stdin "$HEAD" >/dev/null 2>&1; then
+  echo "ok: CRLF verdict from the web UI passes"
+else
+  echo "FAIL: CRLF verdict blocked — expected pass." >&2
+  echo "  Fix: review-audit.sh must strip carriage returns before matching." >&2
+  FAIL=1
+fi
 
 if "$AUDIT" --stdin "not-a-sha" </dev/null >/dev/null 2>&1; then
   echo "FAIL: malformed head SHA accepted." >&2
